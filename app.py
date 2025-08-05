@@ -55,6 +55,38 @@ def fetch_bubble_data(data_type, params=None):
             'details': str(e)
         }
 
+def get_total_count(data_type):
+    """
+    Get the total count of items for a specific data type from Bubble API
+    Using pagination to handle large datasets
+    
+    Args:
+        data_type (str): The type of data to count
+        
+    Returns:
+        int: Total count of items, or 0 if error
+    """
+    try:
+        # Make initial call with limit=1 to get count and remaining
+        params = {'limit': 1, 'cursor': 0}
+        data = fetch_bubble_data(data_type, params)
+        
+        if 'error' in data:
+            app.logger.error(f"Error getting count for {data_type}: {data}")
+            return 0
+        
+        # Total = count (items in current page) + remaining (items left)
+        count = data.get('count', 0)
+        remaining = data.get('remaining', 0)
+        total = count + remaining
+        
+        app.logger.debug(f"Total count for {data_type}: {total} (count: {count}, remaining: {remaining})")
+        return total
+        
+    except Exception as e:
+        app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
+        return 0
+
 @app.route('/')
 def index():
     """
@@ -77,6 +109,45 @@ def test_api():
             'error': 'Test route failed',
             'details': str(e)
         }), 500
+
+@app.route('/api/total_users')
+def api_total_users():
+    """
+    API endpoint to get total count of users
+    Returns: JSON with total_users count
+    """
+    try:
+        total = get_total_count('user')
+        return jsonify({'total_users': total})
+    except Exception as e:
+        app.logger.error(f"Error in /api/total_users: {str(e)}")
+        return jsonify({'total_users': 0, 'error': str(e)}), 500
+
+@app.route('/api/total_conversations')
+def api_total_conversations():
+    """
+    API endpoint to get total count of conversations
+    Returns: JSON with total_conversations count
+    """
+    try:
+        total = get_total_count('conversation')
+        return jsonify({'total_conversations': total})
+    except Exception as e:
+        app.logger.error(f"Error in /api/total_conversations: {str(e)}")
+        return jsonify({'total_conversations': 0, 'error': str(e)}), 500
+
+@app.route('/api/total_messages')
+def api_total_messages():
+    """
+    API endpoint to get total count of messages
+    Returns: JSON with total_messages count
+    """
+    try:
+        total = get_total_count('message')
+        return jsonify({'total_messages': total})
+    except Exception as e:
+        app.logger.error(f"Error in /api/total_messages: {str(e)}")
+        return jsonify({'total_messages': 0, 'error': str(e)}), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
