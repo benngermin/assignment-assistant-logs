@@ -1,0 +1,56 @@
+/* Custom styles for Assignment Assistant Dashboard */
+/* Most styling is handled by Bootstrap - only custom overrides here */
+
+:root {
+    /* Custom CSS variables if needed for future enhancements */
+    --dashboard-spacing: 1.5rem;
+    --card-border-radius: 0.5rem;
+}
+
+/* Custom styles will be added here as the application grows */
+/* For now, we rely primarily on Bootstrap classes */
+
+/* Ensure proper spacing for the dashboard */
+.container {
+    max-width: 1200px;
+}
+
+/* Custom card hover effects */
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border-radius: var(--card-border-radius);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* Ensure icons are properly aligned */
+.fa-2x {
+    width: 2em;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    footer,
+    .btn {
+        display: none;
+    }
+    
+    .container {
+        max-width: none;
+    }
+}

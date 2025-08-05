@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Assistant Dashboard</title>
+    
+    <!-- Bootstrap CSS with Replit dark theme -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-clipboard-list me-2"></i>
+                Assignment Assistant Dashboard
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="fas fa-home me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/test">
+                            <i class="fas fa-flask me-1"></i>API Test
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-4 mb-2">
+                    <i class="fas fa-tachometer-alt me-3"></i>
+                    Assignment Assistant Dashboard
+                </h1>
+                <p class="lead text-muted">Manage assignments and track progress with Bubble API integration</p>
+            </div>
+        </div>
+
+        <!-- Dashboard Cards -->
+        <div class="row g-4">
+            <!-- API Status Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-plug fa-2x text-info"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="card-title mb-0">API Connection</h5>
+                                <small class="text-muted">Bubble API Status</small>
+                            </div>
+                        </div>
+                        <p class="card-text">Check the connection status with Bubble API and test data retrieval.</p>
+                        <a href="/test" class="btn btn-outline-info">
+                            <i class="fas fa-vial me-2"></i>Test Connection
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignments Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-tasks fa-2x text-success"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="card-title mb-0">Assignments</h5>
+                                <small class="text-muted">Manage Tasks</small>
+                            </div>
+                        </div>
+                        <p class="card-text">View, create, and manage assignments through the integrated dashboard.</p>
+                        <button class="btn btn-outline-success" disabled>
+                            <i class="fas fa-plus me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-chart-bar fa-2x text-warning"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="card-title mb-0">Analytics</h5>
+                                <small class="text-muted">Progress Reports</small>
+                            </div>
+                        </div>
+                        <p class="card-text">Generate reports and analyze assignment completion statistics.</p>
+                        <button class="btn btn-outline-warning" disabled>
+                            <i class="fas fa-chart-line me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <h3 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h3>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+                <div class="d-grid">
+                    <button class="btn btn-outline-primary btn-lg" disabled>
+                        <i class="fas fa-plus-circle me-2"></i>
+                        New Assignment
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="d-grid">
+                    <button class="btn btn-outline-secondary btn-lg" disabled>
+                        <i class="fas fa-list me-2"></i>
+                        View All
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="d-grid">
+                    <button class="btn btn-outline-info btn-lg" disabled>
+                        <i class="fas fa-sync me-2"></i>
+                        Sync Data
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="d-grid">
+                    <a href="/test" class="btn btn-outline-success btn-lg">
+                        <i class="fas fa-cogs me-2"></i>
+                        Test API
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-4 bg-dark border-top">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Assignment Assistant Dashboard
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted mb-0">
+                        Powered by Flask & Bubble API
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
