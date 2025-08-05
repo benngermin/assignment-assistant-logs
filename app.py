@@ -302,15 +302,39 @@ def api_conversations():
     """
     API endpoint to fetch all conversations sorted by Created Date
     Returns list of conversation objects with key fields
+    Supports filtering by user_id and course_id
     """
     try:
-        # Sort by Created Date descending
+        # Get filter parameters from query string
+        user_id = request.args.get('user_id')
+        course_id = request.args.get('course_id')
+        
+        # Build base params
         params = {
             'sort_field': 'Created Date',
             'descending': 'true'
         }
         
-        # Fetch all conversations with sorting
+        # Build constraints if filters are provided
+        constraints = []
+        if user_id:
+            constraints.append({
+                "key": "user",
+                "constraint_type": "equals",
+                "value": user_id
+            })
+        if course_id:
+            constraints.append({
+                "key": "course",
+                "constraint_type": "equals", 
+                "value": course_id
+            })
+        
+        # Add constraints to params if they exist
+        if constraints:
+            params['constraints'] = json.dumps(constraints)
+        
+        # Fetch all conversations with sorting and optional filters
         conversations = fetch_all('conversation', params)
         
         # Extract key fields from each conversation
@@ -326,12 +350,13 @@ def api_conversations():
                 'last_message': conv.get('last_message', '')
             })
         
-        app.logger.info(f"Successfully fetched {len(result)} conversations")
+        app.logger.info(f"Successfully fetched {len(result)} conversations (filtered: {bool(constraints)})")
         return jsonify(result)
         
     except Exception as e:
         app.logger.error(f"Error in /api/conversations: {str(e)}")
-        return jsonify({'error': str(e), 'conversations': []}), 500
+        # Return empty list instead of error to avoid frontend crashes
+        return jsonify([])
 
 @app.route('/api/conversation/<conv_id>')
 def api_conversation_messages(conv_id):
@@ -378,11 +403,12 @@ def api_conversation_messages(conv_id):
         
     except Exception as e:
         app.logger.error(f"Error in /api/conversation/{conv_id}: {str(e)}")
+        # Return empty messages list instead of error to avoid frontend crashes
         return jsonify({
             'conversation_id': conv_id,
-            'error': str(e),
+            'message_count': 0,
             'messages': []
-        }), 500
+        })
 
 @app.errorhandler(404)
 def not_found_error(error):

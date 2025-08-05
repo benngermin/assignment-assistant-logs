@@ -1,38 +1,128 @@
 // Main JavaScript file for Assignment Assistant Dashboard
 
+// Alert system
+function showAlert(message, type = 'danger') {
+    const alertContainer = document.getElementById('alert-container');
+    const alertId = 'alert-' + Date.now();
+    const alertHtml = `
+        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'danger' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const alertElement = document.getElementById(alertId);
+        if (alertElement) {
+            alertElement.remove();
+        }
+    }, 5000);
+}
+
+// Show loading spinner
+function showSpinner(elementId, message = 'Loading...') {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">${message}</span>
+                </div>
+                <p class="mt-2">${message}</p>
+            </div>
+        `;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Assignment Assistant Dashboard loaded');
     
-    // Load metrics on page load
+    // Load metrics with error handling
+    showSpinner('metric-total-users', '...');
+    showSpinner('metric-total-conversations', '...');
+    showSpinner('metric-total-messages', '...');
+    showSpinner('metric-avg-messages', '...');
+    
     fetch('/api/metrics')
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`API Error: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
             document.getElementById('metric-total-users').innerText = data.total_users || 0;
             document.getElementById('metric-total-conversations').innerText = data.total_conversations || 0;
             document.getElementById('metric-total-messages').innerText = data.total_messages || 0;
             document.getElementById('metric-avg-messages').innerText = data.avg_messages_per_conversation ? data.avg_messages_per_conversation.toFixed(1) : '0';
             
-            // Also update the old stats cards
-            document.getElementById('user-count').innerText = data.total_users || 0;
-            document.getElementById('conversation-count').innerText = data.total_conversations || 0;
-            document.getElementById('message-count').innerText = data.total_messages || 0;
+            // Also update the old stats cards if they exist
+            const userCount = document.getElementById('user-count');
+            const convCount = document.getElementById('conversation-count');
+            const msgCount = document.getElementById('message-count');
+            if (userCount) userCount.innerText = data.total_users || 0;
+            if (convCount) convCount.innerText = data.total_conversations || 0;
+            if (msgCount) msgCount.innerText = data.total_messages || 0;
+            
+            if (data.total_users === 0 && data.total_conversations === 0) {
+                showAlert('API Error: Check API key. No data available.', 'warning');
+            }
         })
         .catch(err => {
             console.error('Error loading metrics:', err);
+            showAlert('API Error: Failed to load metrics. Check API key.', 'danger');
             document.getElementById('metric-total-users').innerText = '0';
             document.getElementById('metric-total-conversations').innerText = '0';
             document.getElementById('metric-total-messages').innerText = '0';
             document.getElementById('metric-avg-messages').innerText = '0';
         });
     
-    // Load conversations and build table
-    fetch('/api/conversations')
-        .then(res => res.json())
+    // Load conversations
+    loadConversationsTable();
+    
+    // Initialize dashboard
+    initializeDashboard();
+    
+    // Load additional metrics after a delay
+    setTimeout(loadMetrics, 1000);
+});
+
+// Load conversations table with filters
+function loadConversationsTable(userId = null, courseId = null) {
+    const tbody = document.getElementById('conversations-tbody');
+    
+    // Show loading spinner
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading conversations...</span>
+                </div>
+                <p class="mt-2">Loading conversations...</p>
+            </td>
+        </tr>
+    `;
+    
+    // Build query params
+    let url = '/api/conversations';
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (courseId) params.append('course_id', courseId);
+    if (params.toString()) url += '?' + params.toString();
+    
+    fetch(url)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`API Error: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(conversations => {
-            const tbody = document.getElementById('conversations-tbody');
-            
             if (conversations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No conversations found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No records available</td></tr>';
                 return;
             }
             
@@ -41,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             conversations.forEach(conv => {
                 const createdDate = conv['Created Date'] ? new Date(conv['Created Date']).toLocaleString() : 'N/A';
                 html += `
-                    <tr onclick="loadConversation('${conv._id}')" style="cursor: pointer;">
+                    <tr onclick="loadConversation('${conv._id}')" style="cursor: pointer;" class="conversation-row">
                         <td>${conv._id ? conv._id.substring(0, 8) + '...' : 'N/A'}</td>
                         <td>${createdDate}</td>
                         <td>${conv.user ? conv.user.substring(0, 8) + '...' : 'N/A'}</td>
@@ -51,19 +141,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
             tbody.innerHTML = html;
+            
+            // Show success message if filtered
+            if (userId || courseId) {
+                showAlert(`Found ${conversations.length} filtered conversations`, 'success');
+            }
         })
         .catch(err => {
             console.error('Error loading conversations:', err);
-            document.getElementById('conversations-tbody').innerHTML = 
-                '<tr><td colspan="5" class="text-center text-danger">Error loading conversations</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">API Error: Failed to load conversations</td></tr>';
+            showAlert('API Error: Failed to load conversations. Check API key.', 'danger');
         });
+}
+
+// Apply filters
+function applyFilters() {
+    const userId = document.getElementById('filter-user-id').value.trim();
+    const courseId = document.getElementById('filter-course-id').value.trim();
     
-    // Initialize dashboard
-    initializeDashboard();
+    if (!userId && !courseId) {
+        showAlert('Please enter at least one filter value', 'warning');
+        return;
+    }
     
-    // Load additional metrics after a delay
-    setTimeout(loadMetrics, 1000);
-});
+    loadConversationsTable(userId, courseId);
+}
+
+// Clear filters
+function clearFilters() {
+    document.getElementById('filter-user-id').value = '';
+    document.getElementById('filter-course-id').value = '';
+    loadConversationsTable();
+    showAlert('Filters cleared', 'info');
+}
 
 function initializeDashboard() {
     // Dashboard initialization logic will be added here
@@ -144,14 +254,28 @@ function loadConversation(id) {
     // Show chat display area
     document.getElementById('chat-display').style.display = 'block';
     
+    // Show loading spinner in chat container
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading messages...</span>
+            </div>
+            <p class="mt-2">Loading messages...</p>
+        </div>
+    `;
+    
     // Load messages
     fetch(`/api/conversation/${id}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`API Error: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
-            const chatContainer = document.getElementById('chat-container');
-            
             if (!data.messages || data.messages.length === 0) {
-                chatContainer.innerHTML = '<p class="text-center text-muted">No messages in this conversation</p>';
+                chatContainer.innerHTML = '<p class="text-center text-muted">No records available</p>';
                 return;
             }
             
@@ -180,8 +304,9 @@ function loadConversation(id) {
         })
         .catch(err => {
             console.error('Error loading conversation:', err);
-            document.getElementById('chat-container').innerHTML = 
-                '<p class="text-center text-danger">Error loading messages</p>';
+            chatContainer.innerHTML = 
+                '<p class="text-center text-danger">API Error: Failed to load messages</p>';
+            showAlert('API Error: Failed to load conversation messages. Check API key.', 'danger');
         });
 }
 
