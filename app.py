@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+from collections import Counter
 from flask import Flask, render_template, jsonify
 
 # Set up logging for debugging
@@ -76,8 +77,8 @@ def get_total_count(data_type):
             return 0
         
         # Total = count (items in current page) + remaining (items left)
-        count = data.get('count', 0)
-        remaining = data.get('remaining', 0)
+        count = int(data.get('count', 0))
+        remaining = int(data.get('remaining', 0))
         total = count + remaining
         
         app.logger.debug(f"Total count for {data_type}: {total} (count: {count}, remaining: {remaining})")
@@ -86,6 +87,50 @@ def get_total_count(data_type):
     except Exception as e:
         app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
         return 0
+
+def fetch_all(data_type):
+    """
+    Fetch all items of a specific data type from Bubble API using pagination
+    
+    Args:
+        data_type (str): The type of data to fetch
+        
+    Returns:
+        list: All results from the API, or empty list if error
+    """
+    all_results = []
+    cursor = 0
+    limit = 100
+    
+    try:
+        while True:
+            params = {'cursor': cursor, 'limit': limit}
+            data = fetch_bubble_data(data_type, params)
+            
+            if 'error' in data:
+                app.logger.error(f"Error fetching all {data_type}: {data}")
+                return []
+            
+            # Get results from response
+            results = data.get('results', [])
+            all_results.extend(results)
+            
+            # Check if there are more items
+            remaining = data.get('remaining', 0)
+            if remaining == 0:
+                break
+                
+            # Update cursor for next batch
+            cursor += limit
+            
+            app.logger.debug(f"Fetched {len(results)} {data_type} items, total so far: {len(all_results)}")
+        
+        app.logger.info(f"Successfully fetched {len(all_results)} total {data_type} items")
+        return all_results
+        
+    except Exception as e:
+        app.logger.error(f"Exception in fetch_all for {data_type}: {str(e)}")
+        return []
 
 @app.route('/')
 def index():
@@ -148,6 +193,103 @@ def api_total_messages():
     except Exception as e:
         app.logger.error(f"Error in /api/total_messages: {str(e)}")
         return jsonify({'total_messages': 0, 'error': str(e)}), 500
+
+@app.route('/api/metrics')
+def api_metrics():
+    """
+    API endpoint to compute and return usage metrics
+    Returns comprehensive metrics including counts, averages, and distributions
+    """
+    try:
+        # Get total counts
+        total_users = get_total_count('user')
+        total_conversations = get_total_count('conversation')
+        total_messages = get_total_count('message')
+        
+        # Initialize metrics dictionary
+        metrics = {
+            'total_users': total_users,
+            'total_conversations': total_conversations,
+            'total_messages': total_messages,
+            'avg_messages_per_conv': 0,
+            'convs_per_course': {},
+            'convs_per_assignment': {}
+        }
+        
+        # Calculate average messages per conversation
+        all_messages = []  # Initialize to avoid unbound variable
+        if total_conversations > 0:
+            # If we have too many messages, use simple average
+            if total_messages > 10000:
+                metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2)
+                app.logger.info(f"Using simple average for messages per conversation: {metrics['avg_messages_per_conv']}")
+            else:
+                # Fetch all messages and group by conversation
+                all_messages = fetch_all('message')
+                if all_messages:
+                    # Group messages by conversation ID
+                    messages_by_conv = Counter()
+                    for message in all_messages:
+                        conv_id = message.get('conversation', message.get('conversation_id'))
+                        if conv_id:
+                            messages_by_conv[conv_id] += 1
+                    
+                    # Calculate average
+                    if messages_by_conv:
+                        avg = sum(messages_by_conv.values()) / len(messages_by_conv)
+                        metrics['avg_messages_per_conv'] = round(avg, 2)
+                        app.logger.info(f"Calculated average messages per conversation: {metrics['avg_messages_per_conv']}")
+                else:
+                    # If fetch failed but we have totals, use simple average
+                    metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2) if total_conversations > 0 else 0
+        
+        # Fetch all conversations for grouping by course and assignment
+        all_conversations = fetch_all('conversation')
+        if all_conversations:
+            # Group conversations by course
+            course_counter = Counter()
+            assignment_counter = Counter()
+            
+            for conv in all_conversations:
+                # Count by course field (assuming it exists as reference ID)
+                course_id = conv.get('course', conv.get('course_id', conv.get('Course')))
+                if course_id:
+                    course_counter[str(course_id)] += 1
+                
+                # Count by assignment field
+                assignment_id = conv.get('assignment', conv.get('assignment_id', conv.get('Assignment')))
+                if assignment_id:
+                    assignment_counter[str(assignment_id)] += 1
+            
+            # Convert counters to dictionaries
+            metrics['convs_per_course'] = dict(course_counter)
+            metrics['convs_per_assignment'] = dict(assignment_counter)
+            
+            app.logger.info(f"Found {len(course_counter)} unique courses with conversations")
+            app.logger.info(f"Found {len(assignment_counter)} unique assignments with conversations")
+        
+        # Add summary statistics
+        metrics['summary'] = {
+            'unique_courses': len(metrics['convs_per_course']),
+            'unique_assignments': len(metrics['convs_per_assignment']),
+            'data_quality': 'complete' if all_conversations or all_messages else 'limited'
+        }
+        
+        return jsonify(metrics)
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/metrics: {str(e)}")
+        # Return gracefully formatted error response
+        return jsonify({
+            'total_users': 0,
+            'total_conversations': 0,
+            'total_messages': 0,
+            'avg_messages_per_conv': 0,
+            'convs_per_course': {},
+            'convs_per_assignment': {},
+            'error': str(e),
+            'summary': {'data_quality': 'error'}
+        }), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
