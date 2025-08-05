@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 import requests
 from collections import Counter
 from flask import Flask, render_template, jsonify
@@ -88,12 +89,13 @@ def get_total_count(data_type):
         app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
         return 0
 
-def fetch_all(data_type):
+def fetch_all(data_type, custom_params=None):
     """
     Fetch all items of a specific data type from Bubble API using pagination
     
     Args:
         data_type (str): The type of data to fetch
+        custom_params (dict): Optional custom parameters like constraints or sorting
         
     Returns:
         list: All results from the API, or empty list if error
@@ -105,6 +107,10 @@ def fetch_all(data_type):
     try:
         while True:
             params = {'cursor': cursor, 'limit': limit}
+            # Add custom parameters if provided
+            if custom_params:
+                params.update(custom_params)
+            
             data = fetch_bubble_data(data_type, params)
             
             if 'error' in data:
@@ -289,6 +295,93 @@ def api_metrics():
             'convs_per_assignment': {},
             'error': str(e),
             'summary': {'data_quality': 'error'}
+        }), 500
+
+@app.route('/api/conversations')
+def api_conversations():
+    """
+    API endpoint to fetch all conversations sorted by Created Date
+    Returns list of conversation objects with key fields
+    """
+    try:
+        # Sort by Created Date descending
+        params = {
+            'sort_field': 'Created Date',
+            'descending': 'true'
+        }
+        
+        # Fetch all conversations with sorting
+        conversations = fetch_all('conversation', params)
+        
+        # Extract key fields from each conversation
+        result = []
+        for conv in conversations:
+            result.append({
+                '_id': conv.get('_id'),
+                'Created Date': conv.get('Created Date'),
+                'user': conv.get('user', conv.get('user_id')),
+                'assignment': conv.get('assignment', conv.get('assignment_id')),
+                'course': conv.get('course', conv.get('course_id')),
+                'status': conv.get('status', 'active'),
+                'last_message': conv.get('last_message', '')
+            })
+        
+        app.logger.info(f"Successfully fetched {len(result)} conversations")
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/conversations: {str(e)}")
+        return jsonify({'error': str(e), 'conversations': []}), 500
+
+@app.route('/api/conversation/<conv_id>')
+def api_conversation_messages(conv_id):
+    """
+    API endpoint to fetch messages for a specific conversation
+    Returns list of messages sorted by Created Date
+    """
+    try:
+        # Create constraint to filter messages by conversation ID
+        constraints = [{
+            'key': 'conversation',
+            'constraint_type': 'equals',
+            'value': conv_id
+        }]
+        
+        # Convert constraints to JSON string
+        params = {
+            'constraints': json.dumps(constraints),
+            'sort_field': 'Created Date',
+            'descending': 'false'  # Ascending order for messages (oldest first)
+        }
+        
+        # Fetch all messages for this conversation
+        messages = fetch_all('message', params)
+        
+        # Extract key fields from each message
+        result = []
+        for msg in messages:
+            result.append({
+                '_id': msg.get('_id'),
+                'text': msg.get('text', msg.get('content', '')),
+                'role': msg.get('role', msg.get('sender_type', 'user')),
+                'Created Date': msg.get('Created Date'),
+                'conversation': msg.get('conversation', conv_id),
+                'user': msg.get('user', msg.get('user_id'))
+            })
+        
+        app.logger.info(f"Successfully fetched {len(result)} messages for conversation {conv_id}")
+        return jsonify({
+            'conversation_id': conv_id,
+            'message_count': len(result),
+            'messages': result
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/conversation/{conv_id}: {str(e)}")
+        return jsonify({
+            'conversation_id': conv_id,
+            'error': str(e),
+            'messages': []
         }), 500
 
 @app.errorhandler(404)

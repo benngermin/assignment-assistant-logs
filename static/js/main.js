@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load metrics after a short delay to prioritize main stats
     setTimeout(loadMetrics, 1000);
+    
+    // Load conversations after a slightly longer delay
+    setTimeout(loadConversations, 1500);
 });
 
 function initializeDashboard() {
@@ -221,9 +224,185 @@ async function loadMetrics() {
 
 
 
+// Function to load conversations
+async function loadConversations() {
+    console.log('Loading conversations...');
+    const conversationsContent = document.getElementById('conversations-content');
+    
+    // Show loading state
+    conversationsContent.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">Loading conversations...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading conversation logs...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/conversations');
+        const conversations = await response.json();
+        
+        if (conversations.length === 0) {
+            conversationsContent.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No conversations found. API authentication may be required.
+                </div>
+            `;
+            return;
+        }
+        
+        // Build conversations display
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-hover">';
+        html += `
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Course</th>
+                    <th>Assignment</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        for (const conv of conversations.slice(0, 20)) {  // Show first 20
+            const date = conv['Created Date'] ? new Date(conv['Created Date']).toLocaleString() : 'N/A';
+            html += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${conv.user ? conv.user.substring(0, 8) + '...' : 'N/A'}</td>
+                    <td>${conv.course ? conv.course.substring(0, 8) + '...' : 'N/A'}</td>
+                    <td>${conv.assignment ? conv.assignment.substring(0, 8) + '...' : 'N/A'}</td>
+                    <td><span class="badge bg-${conv.status === 'active' ? 'success' : 'secondary'}">${conv.status || 'unknown'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewMessages('${conv._id}')">
+                            <i class="fas fa-eye me-1"></i>View Messages
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        html += '</tbody></table></div>';
+        
+        if (conversations.length > 20) {
+            html += '<p class="text-muted text-center mt-3">Showing first 20 conversations of ' + conversations.length + ' total</p>';
+        }
+        
+        // Add messages modal container
+        html += `
+            <div class="modal fade" id="messagesModal" tabindex="-1" aria-labelledby="messagesModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="messagesModalLabel">Conversation Messages</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="messagesModalBody">
+                            <!-- Messages will be loaded here -->
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        conversationsContent.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+        conversationsContent.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Failed to load conversations. Please try again later.
+            </div>
+        `;
+    }
+}
+
+// Function to view messages for a specific conversation
+async function viewMessages(conversationId) {
+    console.log('Loading messages for conversation:', conversationId);
+    const modalBody = document.getElementById('messagesModalBody');
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">Loading messages...</span>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('messagesModal'));
+    modal.show();
+    
+    try {
+        const response = await fetch(`/api/conversation/${conversationId}`);
+        const data = await response.json();
+        
+        if (data.messages.length === 0) {
+            modalBody.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No messages found for this conversation.
+                </div>
+            `;
+            return;
+        }
+        
+        // Build messages display
+        let html = '<div class="messages-container" style="max-height: 500px; overflow-y: auto;">';
+        
+        for (const msg of data.messages) {
+            const date = msg['Created Date'] ? new Date(msg['Created Date']).toLocaleString() : 'N/A';
+            const isAssistant = msg.role === 'assistant' || msg.role === 'bot';
+            
+            html += `
+                <div class="message mb-3 p-3 rounded ${isAssistant ? 'bg-dark' : 'bg-primary bg-opacity-10'}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-${isAssistant ? 'info' : 'primary'}">
+                            <i class="fas fa-${isAssistant ? 'robot' : 'user'} me-1"></i>
+                            ${msg.role}
+                        </span>
+                        <small class="text-muted">${date}</small>
+                    </div>
+                    <div class="message-text">${msg.text || 'No content'}</div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        html += `<p class="text-muted text-center mt-3">Total messages: ${data.message_count}</p>`;
+        
+        modalBody.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        modalBody.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Failed to load messages. Please try again later.
+            </div>
+        `;
+    }
+}
+
+
+
 // Export functions for potential use in other scripts
 window.AssignmentDashboard = {
     showNotification,
     handleApiError,
-    loadMetrics
+    loadMetrics,
+    loadConversations,
+    viewMessages
 };
