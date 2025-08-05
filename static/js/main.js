@@ -1,17 +1,68 @@
 // Main JavaScript file for Assignment Assistant Dashboard
-// This file will contain client-side functionality as the application grows
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Assignment Assistant Dashboard loaded');
     
-    // Add any initialization code here
+    // Load metrics on page load
+    fetch('/api/metrics')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('metric-total-users').innerText = data.total_users || 0;
+            document.getElementById('metric-total-conversations').innerText = data.total_conversations || 0;
+            document.getElementById('metric-total-messages').innerText = data.total_messages || 0;
+            document.getElementById('metric-avg-messages').innerText = data.avg_messages_per_conversation ? data.avg_messages_per_conversation.toFixed(1) : '0';
+            
+            // Also update the old stats cards
+            document.getElementById('user-count').innerText = data.total_users || 0;
+            document.getElementById('conversation-count').innerText = data.total_conversations || 0;
+            document.getElementById('message-count').innerText = data.total_messages || 0;
+        })
+        .catch(err => {
+            console.error('Error loading metrics:', err);
+            document.getElementById('metric-total-users').innerText = '0';
+            document.getElementById('metric-total-conversations').innerText = '0';
+            document.getElementById('metric-total-messages').innerText = '0';
+            document.getElementById('metric-avg-messages').innerText = '0';
+        });
+    
+    // Load conversations and build table
+    fetch('/api/conversations')
+        .then(res => res.json())
+        .then(conversations => {
+            const tbody = document.getElementById('conversations-tbody');
+            
+            if (conversations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No conversations found</td></tr>';
+                return;
+            }
+            
+            // Build table rows
+            let html = '';
+            conversations.forEach(conv => {
+                const createdDate = conv['Created Date'] ? new Date(conv['Created Date']).toLocaleString() : 'N/A';
+                html += `
+                    <tr onclick="loadConversation('${conv._id}')" style="cursor: pointer;">
+                        <td>${conv._id ? conv._id.substring(0, 8) + '...' : 'N/A'}</td>
+                        <td>${createdDate}</td>
+                        <td>${conv.user ? conv.user.substring(0, 8) + '...' : 'N/A'}</td>
+                        <td>${conv.assignment ? conv.assignment.substring(0, 8) + '...' : 'N/A'}</td>
+                        <td>${conv.course ? conv.course.substring(0, 8) + '...' : 'N/A'}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        })
+        .catch(err => {
+            console.error('Error loading conversations:', err);
+            document.getElementById('conversations-tbody').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-danger">Error loading conversations</td></tr>';
+        });
+    
+    // Initialize dashboard
     initializeDashboard();
     
-    // Load metrics after a short delay to prioritize main stats
+    // Load additional metrics after a delay
     setTimeout(loadMetrics, 1000);
-    
-    // Load conversations after a slightly longer delay
-    setTimeout(loadConversations, 1500);
 });
 
 function initializeDashboard() {
@@ -84,6 +135,54 @@ function updateStatDisplay(elementId, value) {
             setTimeout(() => element.classList.remove('fade-in'), 500);
         }
     }
+}
+
+// Function to load conversation messages
+function loadConversation(id) {
+    console.log('Loading conversation:', id);
+    
+    // Show chat display area
+    document.getElementById('chat-display').style.display = 'block';
+    
+    // Load messages
+    fetch(`/api/conversation/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            const chatContainer = document.getElementById('chat-container');
+            
+            if (!data.messages || data.messages.length === 0) {
+                chatContainer.innerHTML = '<p class="text-center text-muted">No messages in this conversation</p>';
+                return;
+            }
+            
+            // Build chat display
+            let html = '';
+            data.messages.forEach(msg => {
+                const isUser = msg.role === 'user';
+                const messageClass = isUser ? 'user' : 'assistant';
+                
+                html += `
+                    <div class="chat-bubble ${messageClass} mb-3">
+                        <div class="message-header">
+                            <small class="text-muted">${msg.role}</small>
+                        </div>
+                        <div class="message-content">
+                            ${msg.text || 'No content'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            chatContainer.innerHTML = html;
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(err => {
+            console.error('Error loading conversation:', err);
+            document.getElementById('chat-container').innerHTML = 
+                '<p class="text-center text-danger">Error loading messages</p>';
+        });
 }
 
 // Utility functions for future API interactions

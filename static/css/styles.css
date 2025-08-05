@@ -77,6 +77,42 @@
     }
 }
 
+/* Chat bubble styles */
+.chat-bubble {
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    max-width: 70%;
+}
+
+.chat-bubble.user {
+    text-align: right;
+    background: lightblue;
+    margin-left: auto;
+    color: #000;
+}
+
+.chat-bubble.assistant {
+    background: lightgreen;
+    margin-right: auto;
+    color: #000;
+}
+
+.chat-bubble .message-header {
+    font-size: 0.85em;
+    margin-bottom: 5px;
+    opacity: 0.7;
+}
+
+.chat-bubble .message-content {
+    word-wrap: break-word;
+}
+
+#chat-container {
+    background: rgba(255, 255, 255, 0.05);
+    min-height: 200px;
+}
+
 /* Print styles */
 @media print {
     .navbar,
