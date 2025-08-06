@@ -391,10 +391,11 @@ def api_metrics():
             if all_courses:
                 for course in all_courses:
                     course_id = course.get('_id')
-                    # Priority order: full_name_text > course_name > name_text > name > title > fallback
-                    course_name = (course.get('full_name_text') or 
+                    # Use course number (name_text) as primary identifier
+                    # This will show like "CPCU 551" instead of "Managing Commercial Property Risk"
+                    course_name = (course.get('name_text') or 
                                  course.get('course_name') or 
-                                 course.get('name_text') or 
+                                 course.get('full_name_text') or 
                                  course.get('name') or 
                                  course.get('title') or 
                                  f'Course {course_id[:8]}' if course_id else 'Unknown Course')
@@ -615,10 +616,11 @@ def api_chart_sessions_by_course():
         if all_courses:
             for course in all_courses:
                 course_id = course.get('_id')
-                # Priority order: full_name_text > course_name > name_text > name > title > fallback
-                course_name = (course.get('full_name_text') or 
+                # Use course number (name_text) instead of full name for charts
+                # This will show like "CPCU 551" instead of "Managing Commercial Property Risk"
+                course_name = (course.get('name_text') or 
                              course.get('course_name') or 
-                             course.get('name_text') or 
+                             course.get('full_name_text') or 
                              course.get('name') or 
                              course.get('title') or 
                              f'Course {course_id[:8]}' if course_id else 'Unknown Course')
