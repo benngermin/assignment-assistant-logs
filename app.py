@@ -219,7 +219,7 @@ def fetch_all(data_type, custom_params=None):
     all_results = []
     cursor = 0
     limit = 100
-    max_items = 5000  # Limit total items to prevent excessive loading
+    max_items = 2000  # Reduced limit to prevent timeouts
     
     try:
         while True:
@@ -491,30 +491,36 @@ def api_metrics():
                 app.logger.info(f"Using simple average for messages per conversation: {metrics['avg_messages_per_conv']}")
             else:
                 # Fetch all messages (we'll filter manually for both legacy and new fields)
-                all_messages = fetch_all('message')
-                if all_messages:
-                    # Filter for user messages using both legacy and new fields
-                    # then group by conversation ID
-                    messages_by_conv = Counter()
-                    for message in all_messages:
-                        # Check new field (role_option_message_role = 'user')
-                        new_role = message.get('role_option_message_role')
-                        # Check legacy field (role = 'user' or role != 'assistant')
-                        legacy_role = message.get('role')
+                try:
+                    all_messages = fetch_all('message')
+                    if all_messages:
+                        # Filter for user messages using both legacy and new fields
+                        # then group by conversation ID
+                        messages_by_conv = Counter()
+                        for message in all_messages:
+                            # Check new field (role_option_message_role = 'user')
+                            new_role = message.get('role_option_message_role')
+                            # Check legacy field (role = 'user' or role != 'assistant')
+                            legacy_role = message.get('role')
+                            
+                            # Count if new field is 'user' OR legacy field is 'user' OR legacy field is not 'assistant'
+                            if new_role == 'user' or legacy_role == 'user' or (legacy_role and legacy_role != 'assistant'):
+                                conv_id = message.get('conversation', message.get('conversation_id'))
+                                if conv_id:
+                                    messages_by_conv[conv_id] += 1
                         
-                        # Count if new field is 'user' OR legacy field is 'user' OR legacy field is not 'assistant'
-                        if new_role == 'user' or legacy_role == 'user' or (legacy_role and legacy_role != 'assistant'):
-                            conv_id = message.get('conversation', message.get('conversation_id'))
-                            if conv_id:
-                                messages_by_conv[conv_id] += 1
-                    
-                    # Calculate average
-                    if messages_by_conv:
-                        avg = sum(messages_by_conv.values()) / len(messages_by_conv)
-                        metrics['avg_messages_per_conv'] = round(avg, 2)
-                        app.logger.info(f"Calculated average messages per conversation: {metrics['avg_messages_per_conv']}")
-                else:
-                    # If fetch failed but we have totals, use simple average
+                        # Calculate average
+                        if messages_by_conv:
+                            avg = sum(messages_by_conv.values()) / len(messages_by_conv)
+                            metrics['avg_messages_per_conv'] = round(avg, 2)
+                            app.logger.info(f"Calculated average messages per conversation: {metrics['avg_messages_per_conv']}")
+                        else:
+                            metrics['avg_messages_per_conv'] = 0
+                    else:
+                        # If fetch failed but we have totals, use simple average
+                        metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2) if total_conversations > 0 else 0
+                except Exception as e:
+                    app.logger.warning(f"Error fetching messages for average calculation: {str(e)}")
                     metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2) if total_conversations > 0 else 0
         
         # Fetch all conversations for grouping by course and assignment
@@ -641,7 +647,7 @@ def api_metrics():
         metrics['summary'] = {
             'unique_courses': len(metrics['convs_per_course']),
             'unique_assignments': len(metrics['convs_per_assignment']),
-            'data_quality': 'complete' if all_conversations or all_messages else 'limited'
+            'data_quality': 'complete' if all_conversations else 'limited'
         }
         
         return jsonify(metrics)
