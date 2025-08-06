@@ -68,9 +68,28 @@ def fetch_bubble_data(data_type, params=None):
         response = requests.get(url, headers=headers, params=params, timeout=30)
         
         if response.status_code == 200:
-            data = response.json()
-            app.logger.debug(f"Successfully fetched {data_type}: {data.get('count', 0)} items")
-            return data
+            response_data = response.json()
+            
+            # Handle Bubble API response structure
+            if 'response' in response_data:
+                bubble_response = response_data['response']
+                results = bubble_response.get('results', [])
+                cursor = bubble_response.get('cursor', 0)
+                remaining = bubble_response.get('remaining', 0)
+                
+                # Format data to match expected structure
+                data = {
+                    'results': results,
+                    'count': len(results),
+                    'cursor': cursor,
+                    'remaining': remaining
+                }
+                app.logger.debug(f"Successfully fetched {data_type}: {len(results)} items (cursor: {cursor}, remaining: {remaining})")
+                return data
+            else:
+                # Fallback for other API response formats
+                app.logger.debug(f"Successfully fetched {data_type}: {response_data.get('count', 0)} items")
+                return response_data
         else:
             app.logger.error(f"Bubble API error for {data_type}: {response.status_code} - {response.text}")
             return {
