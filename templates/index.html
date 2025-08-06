@@ -1,397 +1,215 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assignment Assistant Dashboard</title>
     
-    <!-- Bootstrap CSS with Replit dark theme -->
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <!-- Navigation Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-clipboard-list me-2"></i>
-                Assignment Assistant Dashboard
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">
-                            <i class="fas fa-home me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/test">
-                            <i class="fas fa-flask me-1"></i>API Test
-                        </a>
-                    </li>
-                </ul>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="container-fluid">
+            <div class="nav-content">
+                <div class="nav-title">
+                    <span class="course-code">Assignment Assistant Dashboard</span>
+                </div>
+                <div class="nav-actions">
+                    <button class="btn-activity">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Refresh Data
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Alert Container -->
-    <div id="alert-container" class="container mt-4" style="position: fixed; top: 70px; right: 20px; z-index: 1050; max-width: 400px;"></div>
-
     <!-- Main Content -->
-    <div class="container mt-4">
-        <!-- Page Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <h1 class="display-4 mb-2">
-                    <i class="fas fa-tachometer-alt me-3"></i>
-                    Assignment Assistant Dashboard
-                </h1>
-                <p class="lead text-muted">Manage assignments and track progress with Bubble API integration</p>
+    <div class="main-container">
+        <!-- Welcome Section -->
+        <div class="welcome-section">
+            <div class="welcome-icon">
+                <i class="fas fa-robot"></i>
             </div>
+            <h1 class="welcome-title">Welcome to Assignment Assistant Dashboard</h1>
+            <p class="welcome-subtitle">Monitor your course data and track student engagement</p>
         </div>
 
-        <!-- Metrics Panel -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Metrics Panel</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <div class="stat-card text-center p-3 border rounded">
-                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                                    <h6>Total Users</h6>
-                                    <h3 id="metric-total-users">-</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="stat-card text-center p-3 border rounded">
-                                    <i class="fas fa-comments fa-2x text-success mb-2"></i>
-                                    <h6>Total Conversations</h6>
-                                    <h3 id="metric-total-conversations">-</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="stat-card text-center p-3 border rounded">
-                                    <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-                                    <h6>Total Messages</h6>
-                                    <h3 id="metric-total-messages">-</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="stat-card text-center p-3 border rounded">
-                                    <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                                    <h6>Avg Messages/Conv</h6>
-                                    <h3 id="metric-avg-messages">-</h3>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon users">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-title">Total Users</h3>
+                    <p class="stat-value" id="total-users">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </p>
                 </div>
             </div>
-        </div>
 
-        <!-- Logs Panel -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h4 class="mb-0"><i class="fas fa-list me-2"></i>Logs Panel</h4>
-                    </div>
-                    <div class="card-body">
-                        <!-- Filters Section -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <input type="text" class="form-control" id="filter-user-id" placeholder="Filter by User ID">
-                            </div>
-                            <div class="col-md-4">
-                                <input type="text" class="form-control" id="filter-course-id" placeholder="Filter by Course ID">
-                            </div>
-                            <div class="col-md-4">
-                                <button class="btn btn-primary" onclick="applyFilters()">
-                                    <i class="fas fa-filter me-1"></i>Apply Filters
-                                </button>
-                                <button class="btn btn-secondary ms-2" onclick="clearFilters()">
-                                    <i class="fas fa-times me-1"></i>Clear
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Table Section -->
-                        <div class="table-responsive">
-                            <table class="table table-hover" id="conversations-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Created Date</th>
-                                        <th>User ID</th>
-                                        <th>Assignment ID</th>
-                                        <th>Course ID</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="conversations-tbody">
-                                    <tr>
-                                        <td colspan="5" class="text-center">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Loading conversations...</span>
-                                            </div>
-                                            <p class="mt-2">Loading conversations...</p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Chat Display Area -->
-                        <div id="chat-display" class="mt-4" style="display: none;">
-                            <h5 class="mb-3">Conversation Messages</h5>
-                            <div id="chat-container" class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
-                                <!-- Messages will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-icon conversations">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-title">Total Conversations</h3>
+                    <p class="stat-value" id="total-conversations">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon messages">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-title">Total Messages</h3>
+                    <p class="stat-value" id="total-messages">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon average">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-title">Avg Messages/Conv</h3>
+                    <p class="stat-value" id="avg-messages">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </p>
                 </div>
             </div>
         </div>
 
-        <!-- Additional Features Section -->
-        <div class="row g-4">
-            <!-- API Status Card -->
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-plug fa-2x text-info"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h5 class="card-title mb-0">API Connection</h5>
-                                <small class="text-muted">Bubble API Status</small>
-                            </div>
-                        </div>
-                        <p class="card-text">Check the connection status with Bubble API and test data retrieval.</p>
-                        <a href="/test" class="btn btn-outline-info">
-                            <i class="fas fa-vial me-2"></i>Test Connection
-                        </a>
-                    </div>
+        <!-- Feature Cards Grid -->
+        <div class="features-grid">
+            <!-- Quiz Me Card -->
+            <div class="feature-card quiz-card">
+                <div class="feature-icon">
+                    <i class="fas fa-question-circle"></i>
                 </div>
+                <div class="feature-content">
+                    <h3>Quiz Me</h3>
+                    <p>Test your knowledge</p>
+                </div>
+                <span class="quiz-count" id="quiz-count">0</span>
             </div>
 
-            <!-- Assignments Card -->
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-tasks fa-2x text-success"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h5 class="card-title mb-0">Assignments</h5>
-                                <small class="text-muted">Manage Tasks</small>
-                            </div>
-                        </div>
-                        <p class="card-text">View, create, and manage assignments through the integrated dashboard.</p>
-                        <button class="btn btn-outline-success" disabled>
-                            <i class="fas fa-plus me-2"></i>Coming Soon
-                        </button>
-                    </div>
+            <!-- Review Terms Card -->
+            <div class="feature-card review-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clipboard-list"></i>
                 </div>
+                <div class="feature-content">
+                    <h3>Review Terms</h3>
+                    <p>Quick flashcard style recall</p>
+                </div>
+                <span class="review-count" id="review-count">0</span>
             </div>
 
-            <!-- Reports Card -->
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-chart-bar fa-2x text-warning"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h5 class="card-title mb-0">Analytics</h5>
-                                <small class="text-muted">Progress Reports</small>
-                            </div>
-                        </div>
-                        <p class="card-text">Generate reports and analyze assignment completion statistics.</p>
-                        <button class="btn btn-outline-warning" disabled>
-                            <i class="fas fa-chart-line me-2"></i>Coming Soon
-                        </button>
-                    </div>
+            <!-- Key Takeaways Card -->
+            <div class="feature-card takeaway-card">
+                <div class="feature-icon">
+                    <i class="fas fa-lightbulb"></i>
                 </div>
+                <div class="feature-content">
+                    <h3>Key Takeaways</h3>
+                    <p>Summarize key points</p>
+                </div>
+                <span class="takeaway-count" id="takeaway-count">0</span>
+            </div>
+
+            <!-- Simplify Concept Card -->
+            <div class="feature-card simplify-card">
+                <div class="feature-icon">
+                    <i class="fas fa-compress-alt"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Simplify a Concept</h3>
+                    <p>Break down complex topics</p>
+                </div>
+                <span class="simplify-count" id="simplify-count">0</span>
+            </div>
+
+            <!-- Study Hacks Card -->
+            <div class="feature-card study-card">
+                <div class="feature-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Study Hacks</h3>
+                    <p>Learn memory techniques</p>
+                </div>
+                <span class="study-count" id="study-count">0</span>
+            </div>
+
+            <!-- Motivate Me Card -->
+            <div class="feature-card motivate-card">
+                <div class="feature-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Motivate Me</h3>
+                    <p>Get inspired to study</p>
+                </div>
+                <span class="motivate-count" id="motivate-count">0</span>
             </div>
         </div>
 
-        <!-- Statistics Section -->
-        <div class="row mt-5 mb-4">
-            <div class="col-12">
-                <h3 class="mb-3">
-                    <i class="fas fa-chart-pie me-2"></i>Data Statistics
-                </h3>
-            </div>
-        </div>
-        
-        <div class="row g-3 mb-5">
-            <div class="col-md-4">
-                <div class="card bg-primary bg-opacity-10">
-                    <div class="card-body text-center">
-                        <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                        <h5 class="card-title">Total Users</h5>
-                        <h2 class="display-6" id="total-users">
-                            <span class="spinner-border spinner-border-sm" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </span>
-                        </h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-success bg-opacity-10">
-                    <div class="card-body text-center">
-                        <i class="fas fa-comments fa-2x text-success mb-2"></i>
-                        <h5 class="card-title">Total Conversations</h5>
-                        <h2 class="display-6" id="total-conversations">
-                            <span class="spinner-border spinner-border-sm" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </span>
-                        </h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-info bg-opacity-10">
-                    <div class="card-body text-center">
-                        <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-                        <h5 class="card-title">Total Messages</h5>
-                        <h2 class="display-6" id="total-messages">
-                            <span class="spinner-border spinner-border-sm" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </span>
-                        </h2>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="mb-3">
-                    <i class="fas fa-bolt me-2"></i>Quick Actions
-                </h3>
-            </div>
-        </div>
-
-        <div class="row g-3">
-            <div class="col-md-6 col-lg-3">
-                <div class="d-grid">
-                    <button class="btn btn-outline-primary btn-lg" disabled>
-                        <i class="fas fa-plus-circle me-2"></i>
-                        New Assignment
+        <!-- Conversations Section -->
+        <div class="conversations-section">
+            <div class="section-header">
+                <h2><i class="fas fa-comments me-2"></i>Recent Conversations</h2>
+                <div class="filter-controls">
+                    <input type="text" id="user-filter" class="filter-input" placeholder="Filter by User ID">
+                    <input type="text" id="course-filter" class="filter-input" placeholder="Filter by Course ID">
+                    <button class="btn-primary-custom" onclick="loadConversations()">
+                        <i class="fas fa-filter me-1"></i>Filter
                     </button>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="d-grid">
-                    <button class="btn btn-outline-secondary btn-lg" disabled>
-                        <i class="fas fa-list me-2"></i>
-                        View All
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="d-grid">
-                    <button class="btn btn-outline-info btn-lg" disabled>
-                        <i class="fas fa-sync me-2"></i>
-                        Sync Data
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="d-grid">
-                    <a href="/test" class="btn btn-outline-success btn-lg">
-                        <i class="fas fa-cogs me-2"></i>
-                        Test API
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metrics Section -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="mb-3">
-                    <i class="fas fa-chart-area me-2"></i>Advanced Metrics
-                </h3>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-calculator me-2"></i>Comprehensive Usage Metrics
-                            </h5>
-                            <button class="btn btn-sm btn-outline-info" onclick="loadMetrics()">
-                                <i class="fas fa-sync-alt me-1"></i>Refresh Metrics
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="metrics-content">
-                            <div class="text-center py-3">
-                                <div class="spinner-border text-info" role="status">
-                                    <span class="visually-hidden">Loading metrics...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Loading comprehensive metrics...</p>
-                            </div>
-                        </div>
+            
+            <div class="conversations-container">
+                <div id="conversations-list">
+                    <div class="loading-message">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Loading conversations...
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Logs Section -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="mb-3">
-                    <i class="fas fa-history me-2"></i>Conversation Logs
-                </h3>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-comments me-2"></i>Recent Conversations
-                            </h5>
-                            <button class="btn btn-sm btn-outline-info" onclick="loadConversations()">
-                                <i class="fas fa-sync-alt me-1"></i>Refresh Logs
-                            </button>
-                        </div>
+        <!-- Messages Modal -->
+        <div class="modal fade" id="messagesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-comments me-2"></i>Conversation Messages
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="card-body">
-                        <div id="conversations-content">
-                            <div class="text-center py-3">
-                                <div class="spinner-border text-info" role="status">
-                                    <span class="visually-hidden">Loading conversations...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Loading conversation logs...</p>
+                    <div class="modal-body">
+                        <div id="messages-container">
+                            <div class="loading-message">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                Loading messages...
                             </div>
                         </div>
                     </div>
@@ -400,26 +218,10 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="mt-5 py-4 bg-dark border-top">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-clipboard-list me-2"></i>
-                        Assignment Assistant Dashboard
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="text-muted mb-0">
-                        Powered by Flask & Bubble API
-                    </p>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
 
-    <!-- Bootstrap JavaScript -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom JavaScript -->

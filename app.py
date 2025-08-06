@@ -25,7 +25,7 @@ def fetch_bubble_data(data_type, params=None):
     """
     url = f'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/{data_type}'
     headers = {
-        'Authorization': 'Bearer 7c62e2d827655cd29e3f06a971748',
+        'Authorization': 'Bearer 7c62edca8f27655cd29e3f0f6a971748',
         'Content-Type': 'application/json'
     }
     
