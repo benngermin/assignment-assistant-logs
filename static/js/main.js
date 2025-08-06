@@ -37,14 +37,14 @@ function initializeDashboard() {
         refreshBtn.addEventListener('click', async function() {
             // Show loading state
             refreshBtn.disabled = true;
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing with Bubble API...';
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing dashboard...';
             
             try {
                 // First, trigger database sync from Bubble API with timeout
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
                 
-                const syncResponse = await fetch('/api/refresh', {
+                const syncResponse = await fetch('/api/simple-refresh', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

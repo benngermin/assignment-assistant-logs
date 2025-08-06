@@ -35,6 +35,7 @@ if database_url:
     # Initialize database tables
     with app.app_context():
         import models
+        import simple_refresh  # Import simple refresh routes
         db.create_all()
 else:
     app.logger.warning("No DATABASE_URL found, running without database")
