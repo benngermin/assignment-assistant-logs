@@ -119,7 +119,8 @@ class BubbleSyncManager:
             # Check if user exists
             user = User.query.get(user_id)
             if not user:
-                user = User(id=user_id)
+                user = User()
+                user.id = user_id
                 db.session.add(user)
             
             # Update user data
@@ -151,7 +152,8 @@ class BubbleSyncManager:
             
             course = Course.query.get(course_id)
             if not course:
-                course = Course(id=course_id)
+                course = Course()
+                course.id = course_id
                 db.session.add(course)
             
             # Get course name from various fields
@@ -181,7 +183,8 @@ class BubbleSyncManager:
             
             assignment = Assignment.query.get(assignment_id)
             if not assignment:
-                assignment = Assignment(id=assignment_id)
+                assignment = Assignment()
+                assignment.id = assignment_id
                 db.session.add(assignment)
             
             # Get assignment name from various fields
@@ -223,7 +226,8 @@ class BubbleSyncManager:
             
             starter = ConversationStarter.query.get(starter_id)
             if not starter:
-                starter = ConversationStarter(id=starter_id)
+                starter = ConversationStarter()
+                starter.id = starter_id
                 db.session.add(starter)
             
             starter.name = starter_data.get('name') or starter_data.get('name_text')
@@ -252,7 +256,8 @@ class BubbleSyncManager:
             
             conversation = Conversation.query.get(conv_id)
             if not conversation:
-                conversation = Conversation(id=conv_id)
+                conversation = Conversation()
+                conversation.id = conv_id
                 db.session.add(conversation)
             
             # Extract user info
@@ -323,7 +328,8 @@ class BubbleSyncManager:
             
             message = Message.query.get(msg_id)
             if not message:
-                message = Message(id=msg_id)
+                message = Message()
+                message.id = msg_id
                 db.session.add(message)
             
             message.conversation_id = msg_data.get('conversation')
@@ -345,7 +351,8 @@ class BubbleSyncManager:
         """Get or create sync status for a data type"""
         status = SyncStatus.query.filter_by(data_type=data_type).first()
         if not status:
-            status = SyncStatus(data_type=data_type)
+            status = SyncStatus()
+            status.data_type = data_type
             db.session.add(status)
             db.session.commit()
         return status

@@ -1294,22 +1294,87 @@ def refresh_data():
     """Endpoint to trigger a data refresh from Bubble API and sync to database"""
     try:
         from sync_manager import BubbleSyncManager
-        from models import SyncStatus
+        from models import SyncStatus, User, Course, Assignment, Conversation, Message, ConversationStarter
         
-        # Check if this is the first sync (no data in database)
-        sync_statuses = SyncStatus.query.all()
-        is_first_sync = len(sync_statuses) == 0 or all(s.last_sync_date is None for s in sync_statuses)
+        # Check current database state
+        users_count = User.query.count()
+        courses_count = Course.query.count()
+        conversations_count = Conversation.query.count()
+        
+        is_first_sync = (users_count == 0 and courses_count == 0 and conversations_count == 0)
         
         # Create sync manager
         sync_manager = BubbleSyncManager()
         
-        # Perform full sync if first time, otherwise incremental
-        if is_first_sync:
-            app.logger.info("Performing initial full sync")
-            results = sync_manager.perform_full_sync()
-        else:
-            app.logger.info("Performing incremental sync")
-            results = sync_manager.perform_incremental_sync()
+        # Perform sync operations in order
+        results = {
+            'users': {'count': 0, 'success': False},
+            'courses': {'count': 0, 'success': False},
+            'assignments': {'count': 0, 'success': False},
+            'conversation_starters': {'count': 0, 'success': False},
+            'conversations': {'count': 0, 'success': False},
+            'messages': {'count': 0, 'success': False}
+        }
+        
+        try:
+            # Sync users
+            app.logger.info("Syncing users...")
+            count = sync_manager.sync_users()
+            results['users'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} users")
+        except Exception as e:
+            app.logger.error(f"Error syncing users: {e}")
+            results['users']['error'] = str(e)
+        
+        try:
+            # Sync courses
+            app.logger.info("Syncing courses...")
+            count = sync_manager.sync_courses()
+            results['courses'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} courses")
+        except Exception as e:
+            app.logger.error(f"Error syncing courses: {e}")
+            results['courses']['error'] = str(e)
+            
+        try:
+            # Sync assignments
+            app.logger.info("Syncing assignments...")
+            count = sync_manager.sync_assignments()
+            results['assignments'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} assignments")
+        except Exception as e:
+            app.logger.error(f"Error syncing assignments: {e}")
+            results['assignments']['error'] = str(e)
+            
+        try:
+            # Sync conversation starters
+            app.logger.info("Syncing conversation starters...")
+            count = sync_manager.sync_conversation_starters()
+            results['conversation_starters'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} conversation starters")
+        except Exception as e:
+            app.logger.error(f"Error syncing conversation starters: {e}")
+            results['conversation_starters']['error'] = str(e)
+            
+        try:
+            # Sync conversations (limit to recent ones if too many)
+            app.logger.info("Syncing conversations...")
+            count = sync_manager.sync_conversations()
+            results['conversations'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} conversations")
+        except Exception as e:
+            app.logger.error(f"Error syncing conversations: {e}")
+            results['conversations']['error'] = str(e)
+            
+        try:
+            # Sync messages (limit to recent ones if too many)
+            app.logger.info("Syncing messages...")
+            count = sync_manager.sync_messages()
+            results['messages'] = {'count': count, 'success': True}
+            app.logger.info(f"Synced {count} messages")
+        except Exception as e:
+            app.logger.error(f"Error syncing messages: {e}")
+            results['messages']['error'] = str(e)
         
         # Clear the old cache since we're using database now
         cache.clear()
@@ -1322,12 +1387,14 @@ def refresh_data():
         # Return success response
         return jsonify({
             'success': True,
-            'message': f'Data sync completed. {"Initial sync" if is_first_sync else "Incremental sync"} - {total_synced} records processed',
+            'message': f'Data sync completed. {"Initial sync" if is_first_sync else "Update sync"} - {total_synced} records processed',
             'results': results,
             'timestamp': datetime.utcnow().isoformat()
         })
     except Exception as e:
         app.logger.error(f"Error during refresh: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/sync-status')
