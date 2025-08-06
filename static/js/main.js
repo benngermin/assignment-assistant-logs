@@ -241,7 +241,9 @@ function loadConversations() {
                 return;
             }
             
-            let html = '';
+            // Clear existing content
+            conversationsList.innerHTML = '';
+            
             conversations.forEach(conv => {
                 const date = new Date(conv['Created Date']).toLocaleDateString();
                 const time = new Date(conv['Created Date']).toLocaleTimeString('en-US', { 
@@ -254,39 +256,63 @@ function loadConversations() {
                 const courseInfo = conv.course || 'No Course';
                 const assignmentInfo = conv.assignment || 'No Assignment';
                 
-                html += `
-                    <div class="conversation-item" onclick="showMessages('${conv._id}')">
-                        <div class="conversation-header">
-                            <span class="conversation-id">
-                                <i class="fas fa-hashtag"></i> ${conv._id.substring(0, 8)}
-                            </span>
-                            <span class="conversation-date">
-                                <i class="fas fa-calendar"></i> ${date} at ${time}
-                            </span>
-                        </div>
-                        <div class="conversation-details">
-                            <div class="detail-row">
-                                <span class="detail-label">Email:</span>
-                                <span class="detail-value">${userEmail}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Course:</span>
-                                <span class="detail-value">${courseInfo}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Assignment:</span>
-                                <span class="detail-value">${assignmentInfo}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Messages:</span>
-                                <span class="detail-value">${conv.message_count || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // Create elements safely using createElement and textContent
+                const conversationItem = document.createElement('div');
+                conversationItem.className = 'conversation-item';
+                conversationItem.onclick = () => showMessages(conv._id);
+                
+                // Create header
+                const header = document.createElement('div');
+                header.className = 'conversation-header';
+                
+                const idSpan = document.createElement('span');
+                idSpan.className = 'conversation-id';
+                const idIcon = document.createElement('i');
+                idIcon.className = 'fas fa-hashtag';
+                idSpan.appendChild(idIcon);
+                idSpan.appendChild(document.createTextNode(' ' + conv._id.substring(0, 8)));
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'conversation-date';
+                const dateIcon = document.createElement('i');
+                dateIcon.className = 'fas fa-calendar';
+                dateSpan.appendChild(dateIcon);
+                dateSpan.appendChild(document.createTextNode(' ' + date + ' at ' + time));
+                
+                header.appendChild(idSpan);
+                header.appendChild(dateSpan);
+                
+                // Create details
+                const details = document.createElement('div');
+                details.className = 'conversation-details';
+                
+                // Helper function to create detail rows
+                function createDetailRow(label, value) {
+                    const row = document.createElement('div');
+                    row.className = 'detail-row';
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'detail-label';
+                    labelSpan.textContent = label + ':';
+                    
+                    const valueSpan = document.createElement('span');
+                    valueSpan.className = 'detail-value';
+                    valueSpan.textContent = value;
+                    
+                    row.appendChild(labelSpan);
+                    row.appendChild(valueSpan);
+                    return row;
+                }
+                
+                details.appendChild(createDetailRow('Email', userEmail));
+                details.appendChild(createDetailRow('Course', courseInfo));
+                details.appendChild(createDetailRow('Assignment', assignmentInfo));
+                details.appendChild(createDetailRow('Messages', conv.message_count || 0));
+                
+                conversationItem.appendChild(header);
+                conversationItem.appendChild(details);
+                conversationsList.appendChild(conversationItem);
             });
-            
-            conversationsList.innerHTML = html;
         })
         .catch(error => {
             console.error('Error loading conversations:', error);
@@ -340,25 +366,47 @@ function showMessages(conversationId) {
                 return;
             }
             
-            let html = '<div class="messages-list">';
+            // Clear existing content
+            messagesContainer.innerHTML = '';
+            
+            const messagesList = document.createElement('div');
+            messagesList.className = 'messages-list';
+            
             data.messages.forEach(msg => {
                 const role = msg.role || 'user';
                 const messageClass = role === 'assistant' ? 'assistant' : 'user';
                 const date = msg['Created Date'] ? new Date(msg['Created Date']).toLocaleString() : '';
                 
-                html += `
-                    <div class="message-item ${messageClass}">
-                        <div class="message-header">
-                            <span class="message-role">${role}</span>
-                            <span class="message-date">${date}</span>
-                        </div>
-                        <div class="message-text">${msg.text || 'No content'}</div>
-                    </div>
-                `;
+                // Create message item safely
+                const messageItem = document.createElement('div');
+                messageItem.className = `message-item ${messageClass}`;
+                
+                // Create header
+                const messageHeader = document.createElement('div');
+                messageHeader.className = 'message-header';
+                
+                const roleSpan = document.createElement('span');
+                roleSpan.className = 'message-role';
+                roleSpan.textContent = role;
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'message-date';
+                dateSpan.textContent = date;
+                
+                messageHeader.appendChild(roleSpan);
+                messageHeader.appendChild(dateSpan);
+                
+                // Create message text
+                const messageText = document.createElement('div');
+                messageText.className = 'message-text';
+                messageText.textContent = msg.text || 'No content';
+                
+                messageItem.appendChild(messageHeader);
+                messageItem.appendChild(messageText);
+                messagesList.appendChild(messageItem);
             });
-            html += '</div>';
             
-            messagesContainer.innerHTML = html;
+            messagesContainer.appendChild(messagesList);
         })
         .catch(error => {
             console.error('Error loading messages:', error);
@@ -391,14 +439,23 @@ function showAlert(type, message) {
     const alertContainer = document.getElementById('alert-container');
     const alertId = 'alert-' + Date.now();
     
-    const alertHtml = `
-        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
+    // Create alert safely using createElement
+    const alertDiv = document.createElement('div');
+    alertDiv.id = alertId;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.setAttribute('role', 'alert');
     
-    alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+    // Set message text safely
+    alertDiv.textContent = message;
+    
+    // Create close button
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn-close';
+    closeButton.setAttribute('data-bs-dismiss', 'alert');
+    
+    alertDiv.appendChild(closeButton);
+    alertContainer.appendChild(alertDiv);
     
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
