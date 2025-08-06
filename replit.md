@@ -6,12 +6,19 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
 
 ## Recent Changes (August 2025)
 
+### Bug Fixes (August 6, 2025)
+- **Fixed Live Environment Data Loading**: Resolved empty data issue on Live environment by implementing separate API key support
+- **Environment-Specific API Keys**: Updated fetch_bubble_data to use BUBBLE_API_KEY_LIVE for Live environment and BUBBLE_API_KEY for Dev environment
+- **Confirmed API Endpoints**: 
+  - Live: https://assignmentassistants.theinstituteslab.org/api/1.1/obj
+  - Dev: https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj
+- **Successful Data Retrieval**: Verified Live environment now successfully loads 8,000+ conversations and all related metrics
+
 ### Bug Fixes (January 6, 2025)
 - **Fixed Duplicate Initialization**: Resolved JavaScript error caused by duplicate DOMContentLoaded event listeners that was causing console errors
 - **Security Fix**: Moved hardcoded API key to environment variable BUBBLE_API_KEY for better security
 - **Prevented Double Initialization**: Added flag to prevent dashboard from initializing twice
 - **Fixed Chart Loading**: Charts now properly load on initial page load and refresh
-- **API Key Issue**: Identified that the current API key appears to be invalid/expired (returning 401 errors)
 
 ### Previous Changes
 - **Fixed Statistics Loading**: Resolved "Failed to load statistics" error by creating missing `/api/stats` endpoint
