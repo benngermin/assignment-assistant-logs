@@ -40,14 +40,19 @@ function initializeDashboard() {
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing with Bubble API...';
             
             try {
-                // First, trigger database sync from Bubble API
+                // First, trigger database sync from Bubble API with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+                
                 const syncResponse = await fetch('/api/refresh', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
                 const syncResult = await syncResponse.json();
                 
                 if (syncResult.success) {
@@ -89,7 +94,20 @@ function initializeDashboard() {
                 }
             } catch (error) {
                 console.error('Error during refresh:', error);
-                showAlert('danger', 'Failed to refresh data: ' + error.message);
+                let errorMessage = 'Failed to refresh data: ';
+                if (error.name === 'AbortError') {
+                    errorMessage += 'Sync is taking longer than usual. Please wait and try again in a moment.';
+                    // Still try to reload the dashboard data in case sync completed
+                    setTimeout(() => {
+                        loadStatistics();
+                        loadConversations();
+                        loadComprehensiveMetrics();
+                        loadCharts();
+                    }, 5000);
+                } else {
+                    errorMessage += error.message;
+                }
+                showAlert('danger', errorMessage);
                 refreshBtn.disabled = false;
                 refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
             }

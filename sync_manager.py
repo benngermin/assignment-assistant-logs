@@ -27,8 +27,8 @@ class BubbleSyncManager:
         """Fetch a single page of data from Bubble API"""
         url = f"{self.base_url}/{data_type}"
         params = {
-            'cursor': cursor,
-            'limit': limit
+            'cursor': str(cursor),
+            'limit': str(limit)
         }
         if constraints:
             params['constraints'] = json.dumps(constraints)
@@ -77,8 +77,8 @@ class BubbleSyncManager:
             
             cursor += len(results)
             
-            # Safety limit to prevent infinite loops
-            if len(all_results) > 10000:
+            # Safety limit to prevent infinite loops and timeouts
+            if len(all_results) > 5000:  # Reduced limit for faster sync
                 logger.warning(f"Reached safety limit for {data_type}")
                 break
         
@@ -136,7 +136,12 @@ class BubbleSyncManager:
             
             count += 1
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as commit_error:
+            logger.error(f"Error committing users: {commit_error}")
+            db.session.rollback()
+            raise
         logger.info(f"Synced {count} users")
         return count
     

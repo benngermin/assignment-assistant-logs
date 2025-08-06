@@ -1292,19 +1292,35 @@ def api_conversation_messages(conv_id):
 @app.route('/api/refresh', methods=['POST'])
 def refresh_data():
     """Endpoint to trigger a data refresh from Bubble API and sync to database"""
+    start_time = datetime.utcnow()
+    app.logger.info("Starting data refresh process")
+    
     try:
         from sync_manager import BubbleSyncManager
         from models import SyncStatus, User, Course, Assignment, Conversation, Message, ConversationStarter
         
         # Check current database state
-        users_count = User.query.count()
-        courses_count = Course.query.count()
-        conversations_count = Conversation.query.count()
+        try:
+            users_count = User.query.count()
+            courses_count = Course.query.count()
+            conversations_count = Conversation.query.count()
+        except Exception as db_error:
+            app.logger.error(f"Database connection error: {db_error}")
+            return jsonify({'success': False, 'error': 'Database connection error'}), 500
         
         is_first_sync = (users_count == 0 and courses_count == 0 and conversations_count == 0)
+        app.logger.info(f"Current state: {users_count} users, {courses_count} courses, {conversations_count} conversations")
         
         # Create sync manager
-        sync_manager = BubbleSyncManager()
+        try:
+            sync_manager = BubbleSyncManager()
+            # Test API connection first
+            test_response = sync_manager.fetch_bubble_page('user', cursor=0, limit=1)
+            if not test_response:
+                return jsonify({'success': False, 'error': 'Unable to connect to Bubble API'}), 500
+        except Exception as api_error:
+            app.logger.error(f"API connection error: {api_error}")
+            return jsonify({'success': False, 'error': f'API connection error: {str(api_error)}'}), 500
         
         # Perform sync operations in order
         results = {
