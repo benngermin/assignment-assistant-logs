@@ -61,12 +61,14 @@ async function loadMetrics() {
         document.getElementById('review-count').textContent = data.review_count || 0;
         document.getElementById('takeaway-count').textContent = data.takeaway_count || 0;
         document.getElementById('simplify-count').textContent = data.simplify_count || 0;
+        document.getElementById('study-count').textContent = data.study_count || 0;
+        document.getElementById('motivate-count').textContent = data.motivate_count || 0;
         
         console.log('Metrics loaded successfully');
     } catch (error) {
         console.error('Error loading metrics:', error);
         // Set fallback values
-        ['total-conversations', 'total-users', 'quiz-count', 'quiz-display', 'review-count', 'takeaway-count', 'simplify-count'].forEach(id => {
+        ['total-conversations', 'total-users', 'quiz-count', 'quiz-display', 'review-count', 'takeaway-count', 'simplify-count', 'study-count', 'motivate-count'].forEach(id => {
             const element = document.getElementById(id);
             if (element) element.textContent = '0';
         });
