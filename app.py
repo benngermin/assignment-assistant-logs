@@ -96,20 +96,54 @@ def get_total_count(data_type, filter_user_messages=False):
         int: Total count of items, or 0 if error
     """
     try:
-        # For messages with user filter, we need to fetch all and count
+        # For messages with user filter, use separate queries for each constraint
+        # and combine the results (this is much faster than fetching all messages)
         if data_type == 'message' and filter_user_messages:
-            # Use constraints to filter for role = 'user'
-            # The Bubble API field is actually 'role_option_message_role' not just 'role'
-            constraints = [{
-                'key': 'role_option_message_role',
-                'constraint_type': 'equals',
-                'value': 'user'
-            }]
-            params = {
-                'constraints': json.dumps(constraints),
-                'limit': 1,
-                'cursor': 0
-            }
+            try:
+                # Count messages with new field role_option_message_role = 'user'
+                new_role_constraints = [{
+                    'key': 'role_option_message_role',
+                    'constraint_type': 'equals',
+                    'value': 'user'
+                }]
+                new_role_params = {
+                    'constraints': json.dumps(new_role_constraints),
+                    'limit': 1,
+                    'cursor': 0
+                }
+                new_role_data = fetch_bubble_data(data_type, new_role_params)
+                new_role_count = 0
+                if 'error' not in new_role_data:
+                    new_role_count = int(new_role_data.get('count', 0)) + int(new_role_data.get('remaining', 0))
+                
+                # Count messages with legacy field role = 'user'
+                legacy_user_constraints = [{
+                    'key': 'role',
+                    'constraint_type': 'equals',
+                    'value': 'user'
+                }]
+                legacy_user_params = {
+                    'constraints': json.dumps(legacy_user_constraints),
+                    'limit': 1,
+                    'cursor': 0
+                }
+                legacy_user_data = fetch_bubble_data(data_type, legacy_user_params)
+                legacy_user_count = 0
+                if 'error' not in legacy_user_data:
+                    legacy_user_count = int(legacy_user_data.get('count', 0)) + int(legacy_user_data.get('remaining', 0))
+                
+                # Estimate total user messages (this may have some overlap but gives us a good approximation)
+                # For now, let's take the higher count as it's likely more accurate
+                total_user_messages = max(new_role_count, legacy_user_count)
+                
+                app.logger.debug(f"New role field user messages: {new_role_count}, Legacy role field user messages: {legacy_user_count}")
+                app.logger.debug(f"Using count: {total_user_messages}")
+                return total_user_messages
+                
+            except Exception as e:
+                app.logger.warning(f"Error in optimized user message counting, falling back to simple count: {str(e)}")
+                # Fall back to total message count if filtering fails
+                return get_total_count('message', filter_user_messages=False)
         else:
             # Make initial call with limit=1 to get count and remaining
             params = {'limit': 1, 'cursor': 0}
@@ -391,25 +425,23 @@ def api_metrics():
                 metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2)
                 app.logger.info(f"Using simple average for messages per conversation: {metrics['avg_messages_per_conv']}")
             else:
-                # Fetch all user messages and group by conversation
-                # Use constraints to filter for role = 'user'
-                # The Bubble API field is actually 'role_option_message_role' not just 'role'
-                constraints = [{
-                    'key': 'role_option_message_role',
-                    'constraint_type': 'equals',
-                    'value': 'user'
-                }]
-                params = {
-                    'constraints': json.dumps(constraints)
-                }
-                all_messages = fetch_all('message', params)
+                # Fetch all messages (we'll filter manually for both legacy and new fields)
+                all_messages = fetch_all('message')
                 if all_messages:
-                    # Group messages by conversation ID (already filtered for user messages)
+                    # Filter for user messages using both legacy and new fields
+                    # then group by conversation ID
                     messages_by_conv = Counter()
                     for message in all_messages:
-                        conv_id = message.get('conversation', message.get('conversation_id'))
-                        if conv_id:
-                            messages_by_conv[conv_id] += 1
+                        # Check new field (role_option_message_role = 'user')
+                        new_role = message.get('role_option_message_role')
+                        # Check legacy field (role = 'user' or role != 'assistant')
+                        legacy_role = message.get('role')
+                        
+                        # Count if new field is 'user' OR legacy field is 'user' OR legacy field is not 'assistant'
+                        if new_role == 'user' or legacy_role == 'user' or (legacy_role and legacy_role != 'assistant'):
+                            conv_id = message.get('conversation', message.get('conversation_id'))
+                            if conv_id:
+                                messages_by_conv[conv_id] += 1
                     
                     # Calculate average
                     if messages_by_conv:
