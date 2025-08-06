@@ -207,13 +207,17 @@ function loadComprehensiveMetrics() {
 function loadConversations() {
     console.log('Loading conversations...');
     
-    const userId = document.getElementById('user-filter')?.value || '';
-    const courseId = document.getElementById('course-filter')?.value || '';
+    const email = document.getElementById('email-filter')?.value || '';
+    const courseNumber = document.getElementById('course-number-filter')?.value || '';
+    const dateStart = document.getElementById('date-start-filter')?.value || '';
+    const dateEnd = document.getElementById('date-end-filter')?.value || '';
     
     let url = '/api/conversations';
     const params = new URLSearchParams();
-    if (userId) params.append('user_id', userId);
-    if (courseId) params.append('course_id', courseId);
+    if (email) params.append('email', email);
+    if (courseNumber) params.append('course_number', courseNumber);
+    if (dateStart) params.append('date_start', dateStart);
+    if (dateEnd) params.append('date_end', dateEnd);
     if (params.toString()) url += '?' + params.toString();
     
     const conversationsList = document.getElementById('conversations-list');
@@ -240,16 +244,43 @@ function loadConversations() {
             let html = '';
             conversations.forEach(conv => {
                 const date = new Date(conv['Created Date']).toLocaleDateString();
+                const time = new Date(conv['Created Date']).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                // Extract email from user field if available
+                const userEmail = conv.user_email || conv.user || 'Unknown User';
+                const courseInfo = conv.course || 'No Course';
+                const assignmentInfo = conv.assignment || 'No Assignment';
+                
                 html += `
                     <div class="conversation-item" onclick="showMessages('${conv._id}')">
                         <div class="conversation-header">
-                            <span class="conversation-id">ID: ${conv._id.substring(0, 12)}...</span>
-                            <span class="conversation-date">${date}</span>
+                            <span class="conversation-id">
+                                <i class="fas fa-hashtag"></i> ${conv._id.substring(0, 8)}
+                            </span>
+                            <span class="conversation-date">
+                                <i class="fas fa-calendar"></i> ${date} at ${time}
+                            </span>
                         </div>
                         <div class="conversation-details">
-                            <span><i class="fas fa-user"></i> ${conv.user || 'Unknown'}</span>
-                            <span><i class="fas fa-book"></i> ${conv.course || 'N/A'}</span>
-                            <span><i class="fas fa-comments"></i> ${conv.message_count || 0} messages</span>
+                            <div class="detail-row">
+                                <span class="detail-label">Email:</span>
+                                <span class="detail-value">${userEmail}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Course:</span>
+                                <span class="detail-value">${courseInfo}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Assignment:</span>
+                                <span class="detail-value">${assignmentInfo}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Messages:</span>
+                                <span class="detail-value">${conv.message_count || 0}</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -267,6 +298,15 @@ function loadConversations() {
             `;
             showAlert('danger', 'Failed to load conversations. Please check your connection.');
         });
+}
+
+// Clear all filters and reload conversations
+function clearFilters() {
+    document.getElementById('email-filter').value = '';
+    document.getElementById('course-number-filter').value = '';
+    document.getElementById('date-start-filter').value = '';
+    document.getElementById('date-end-filter').value = '';
+    loadConversations();
 }
 
 // Show messages for a specific conversation

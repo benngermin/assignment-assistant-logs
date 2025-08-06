@@ -804,12 +804,14 @@ def api_conversations():
     """
     API endpoint to fetch all conversations sorted by Created Date
     Returns list of conversation objects with key fields
-    Supports filtering by user_id and course_id
+    Supports filtering by email, course_number, and date range
     """
     try:
         # Get filter parameters from query string
-        user_id = request.args.get('user_id')
-        course_id = request.args.get('course_id')
+        email = request.args.get('email')
+        course_number = request.args.get('course_number')
+        date_start = request.args.get('date_start')
+        date_end = request.args.get('date_end')
         
         # Build base params
         params = {
@@ -819,17 +821,36 @@ def api_conversations():
         
         # Build constraints if filters are provided
         constraints = []
-        if user_id:
+        
+        # Email filter - will need to match against user field
+        if email:
             constraints.append({
-                "key": "user",
-                "constraint_type": "equals",
-                "value": user_id
+                "key": "user_email_text",
+                "constraint_type": "text contains",
+                "value": email
             })
-        if course_id:
+        
+        # Course number filter
+        if course_number:
             constraints.append({
-                "key": "course",
-                "constraint_type": "equals", 
-                "value": course_id
+                "key": "course_number_text",
+                "constraint_type": "text contains", 
+                "value": course_number
+            })
+        
+        # Date range filters
+        if date_start:
+            constraints.append({
+                "key": "Created Date",
+                "constraint_type": "greater than",
+                "value": f"{date_start}T00:00:00.000Z"
+            })
+        
+        if date_end:
+            constraints.append({
+                "key": "Created Date",
+                "constraint_type": "less than",
+                "value": f"{date_end}T23:59:59.999Z"
             })
         
         # Add constraints to params if they exist
@@ -873,14 +894,37 @@ def api_conversations():
                 if assignment_id:
                     assignment_name_map[assignment_id] = assignment_name
         
+        # Fetch user data to get email addresses
+        all_users = fetch_all('user')
+        user_email_map = {}
+        
+        if all_users:
+            for user in all_users:
+                user_id = user.get('_id')
+                user_email = user.get('email', user.get('authentication', {}).get('email', {}).get('email', ''))
+                if user_id and user_email:
+                    user_email_map[user_id] = user_email
+        
         # Extract key fields from each conversation
         result = []
         for conv in conversations:
+            # Get user ID and email
+            user_id = conv.get('user', conv.get('user_id'))
+            user_email = conv.get('user_email_text', user_email_map.get(user_id, ''))
+            
             # Get course ID and map it to proper course name
             course_id = conv.get('course_custom_variable_parent', 
                                conv.get('course', 
                                       conv.get('course_id')))
             course_name = course_name_map.get(course_id, f'Course {course_id[:8]}' if course_id else 'Unknown Course')
+            
+            # Get course number if available
+            course_number = conv.get('course_number_text', '')
+            if not course_number and course_id in all_courses:
+                for course in all_courses:
+                    if course.get('_id') == course_id:
+                        course_number = course.get('course_number', course.get('number', ''))
+                        break
             
             # Get assignment ID and map it to proper assignment name
             assignment_id = conv.get('assignment_custom_variable_parent',
@@ -888,14 +932,20 @@ def api_conversations():
                                           conv.get('assignment_id')))
             assignment_name = assignment_name_map.get(assignment_id, f'Assignment {assignment_id[:8]}' if assignment_id else 'Unknown Assignment')
             
+            # Get message count (this would need to be fetched separately if not in conversation)
+            message_count = conv.get('message_count', conv.get('messages_count', 0))
+            
             result.append({
                 '_id': conv.get('_id'),
                 'Created Date': conv.get('Created Date'),
-                'user': conv.get('user', conv.get('user_id')),
+                'user': user_id,
+                'user_email': user_email,
                 'assignment': assignment_name,  # Use assignment name instead of ID
                 'assignment_id': assignment_id,  # Keep original ID for reference
                 'course': course_name,  # Use course name instead of ID
                 'course_id': course_id,  # Keep original ID for reference
+                'course_number': course_number,
+                'message_count': message_count,
                 'status': conv.get('status', 'active'),
                 'last_message': conv.get('last_message', '')
             })

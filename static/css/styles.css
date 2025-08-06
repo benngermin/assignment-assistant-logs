@@ -314,8 +314,16 @@ body {
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 0.9rem;
-    width: 180px;
+    min-width: 150px;
     transition: border-color 0.3s ease;
+}
+
+.filter-input[type="date"] {
+    min-width: 140px;
+}
+
+.filter-input[type="email"] {
+    min-width: 200px;
 }
 
 .filter-input:focus {
@@ -338,6 +346,25 @@ body {
 .btn-primary-custom:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary-custom {
+    background: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 0.5rem;
+}
+
+.btn-secondary-custom:hover {
+    background: #cbd5e0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Conversations Container */
@@ -370,35 +397,65 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f1f5f9;
 }
 
 .conversation-id {
     font-weight: 600;
-    color: #4a5568;
+    color: #667eea;
     font-size: 0.9rem;
-}
-
-.conversation-date {
-    color: #a0aec0;
-    font-size: 0.85rem;
-}
-
-.conversation-details {
-    display: flex;
-    gap: 1.5rem;
-    font-size: 0.875rem;
-    color: #718096;
-}
-
-.conversation-details span {
     display: flex;
     align-items: center;
     gap: 0.25rem;
 }
 
-.conversation-details i {
-    color: #cbd5e0;
+.conversation-id i {
+    font-size: 0.8rem;
+}
+
+.conversation-date {
+    color: #64748b;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.conversation-date i {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.conversation-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.detail-label {
+    color: #94a3b8;
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.detail-value {
+    color: #475569;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Messages Container */
