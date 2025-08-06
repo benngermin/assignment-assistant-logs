@@ -106,6 +106,28 @@ def get_total_count(data_type):
         app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
         return 0
 
+def is_excluded_email(email):
+    """
+    Check if an email should be excluded from metrics and displays
+    
+    Args:
+        email (str): Email address to check
+        
+    Returns:
+        bool: True if email should be excluded, False otherwise
+    """
+    if not email:
+        return False
+    
+    excluded_domains = ['@modia.ai', '@theinstitutes.org']
+    email_lower = email.lower()
+    
+    for domain in excluded_domains:
+        if domain in email_lower:
+            return True
+    
+    return False
+
 def fetch_all(data_type, custom_params=None):
     """
     Fetch all items of a specific data type from Bubble API using pagination
@@ -522,6 +544,28 @@ def api_chart_sessions_by_date():
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
+        # Fetch user data to filter out excluded emails
+        all_users = fetch_all('user')
+        user_email_map = {}
+        
+        if all_users:
+            for user in all_users:
+                user_id = user.get('_id')
+                user_email = user.get('email', user.get('authentication', {}).get('email', {}).get('email', ''))
+                if user_id and user_email:
+                    user_email_map[user_id] = user_email
+        
+        # Filter conversations to exclude certain email domains
+        filtered_conversations = []
+        for conv in all_conversations:
+            user_id = conv.get('user', conv.get('user_id'))
+            user_email = conv.get('user_email_text', user_email_map.get(user_id, ''))
+            
+            if not is_excluded_email(user_email):
+                filtered_conversations.append(conv)
+        
+        all_conversations = filtered_conversations
+        
         from datetime import datetime, timedelta
         from collections import defaultdict
         import calendar
@@ -617,6 +661,28 @@ def api_chart_sessions_by_course():
         all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
+        
+        # Fetch user data to filter out excluded emails
+        all_users = fetch_all('user')
+        user_email_map = {}
+        
+        if all_users:
+            for user in all_users:
+                user_id = user.get('_id')
+                user_email = user.get('email', user.get('authentication', {}).get('email', {}).get('email', ''))
+                if user_id and user_email:
+                    user_email_map[user_id] = user_email
+        
+        # Filter conversations to exclude certain email domains
+        filtered_conversations = []
+        for conv in all_conversations:
+            user_id = conv.get('user', conv.get('user_id'))
+            user_email = conv.get('user_email_text', user_email_map.get(user_id, ''))
+            
+            if not is_excluded_email(user_email):
+                filtered_conversations.append(conv)
+        
+        all_conversations = filtered_conversations
         
         # Fetch course data to get course names
         all_courses = fetch_all('course')
@@ -736,6 +802,28 @@ def api_chart_sessions_by_activity():
         all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
+        
+        # Fetch user data to filter out excluded emails
+        all_users = fetch_all('user')
+        user_email_map = {}
+        
+        if all_users:
+            for user in all_users:
+                user_id = user.get('_id')
+                user_email = user.get('email', user.get('authentication', {}).get('email', {}).get('email', ''))
+                if user_id and user_email:
+                    user_email_map[user_id] = user_email
+        
+        # Filter conversations to exclude certain email domains
+        filtered_conversations = []
+        for conv in all_conversations:
+            user_id = conv.get('user', conv.get('user_id'))
+            user_email = conv.get('user_email_text', user_email_map.get(user_id, ''))
+            
+            if not is_excluded_email(user_email):
+                filtered_conversations.append(conv)
+        
+        all_conversations = filtered_conversations
         
         # Get conversation starter data
         conversation_starters = fetch_all('conversation_starter')
@@ -911,6 +999,11 @@ def api_conversations():
             # Get user ID and email
             user_id = conv.get('user', conv.get('user_id'))
             user_email = conv.get('user_email_text', user_email_map.get(user_id, ''))
+            
+            # Filter out entries from excluded domains
+            if is_excluded_email(user_email):
+                app.logger.debug(f"Filtering out conversation from {user_email}")
+                continue
             
             # Get course ID and map it to proper course name
             course_id = conv.get('course_custom_variable_parent', 
