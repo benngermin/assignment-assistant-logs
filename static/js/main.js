@@ -279,6 +279,256 @@ function showAlert(type, message) {
     }, 5000);
 }
 
+// Chart instances
+let dateChart = null;
+let courseChart = null;
+let activityChart = null;
+
+// Chart colors
+const chartColors = {
+    primary: '#667eea',
+    secondary: '#764ba2',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    info: '#3b82f6'
+};
+
+// Load chart data and create charts
+function loadCharts() {
+    console.log('Loading charts...');
+    loadDateChart();
+    loadCourseChart();
+    loadActivityChart();
+}
+
+function loadDateChart(days = 30) {
+    console.log(`Loading date chart for ${days} days...`);
+    
+    fetch(`/api/chart/sessions-by-date?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('dateChart').getContext('2d');
+            
+            // Destroy existing chart if exists
+            if (dateChart) {
+                dateChart.destroy();
+            }
+            
+            dateChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels.map(label => {
+                        const date = new Date(label);
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }),
+                    datasets: [{
+                        label: 'Sessions',
+                        data: data.data,
+                        borderColor: chartColors.info,
+                        backgroundColor: chartColors.info + '20',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: chartColors.info,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: chartColors.info,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading date chart:', error);
+        });
+}
+
+function loadCourseChart() {
+    console.log('Loading course chart...');
+    
+    fetch('/api/chart/sessions-by-course')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('courseChart').getContext('2d');
+            
+            // Destroy existing chart if exists
+            if (courseChart) {
+                courseChart.destroy();
+            }
+            
+            courseChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Sessions',
+                        data: data.data,
+                        backgroundColor: chartColors.warning,
+                        borderColor: chartColors.warning,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: chartColors.warning,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading course chart:', error);
+        });
+}
+
+function loadActivityChart() {
+    console.log('Loading activity chart...');
+    
+    fetch('/api/chart/sessions-by-activity')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            
+            // Destroy existing chart if exists
+            if (activityChart) {
+                activityChart.destroy();
+            }
+            
+            activityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Sessions',
+                        data: data.data,
+                        backgroundColor: chartColors.success,
+                        borderColor: chartColors.success,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: chartColors.success,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading activity chart:', error);
+        });
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    console.log('Event listeners set up');
+    
+    // Date range selector change event
+    const dateRangeSelector = document.getElementById('date-range-selector');
+    if (dateRangeSelector) {
+        dateRangeSelector.addEventListener('change', function() {
+            const days = parseInt(this.value);
+            loadDateChart(days);
+        });
+    }
+}
+
+// Initialize dashboard when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Assignment Assistant Dashboard loaded');
+    
+    // Load initial data
+    loadStatistics();
+    loadConversations();
+    loadComprehensiveMetrics();
+    loadCharts();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    console.log('Dashboard initialized');
+});
+
 // Export functions for global use
 window.loadConversations = loadConversations;
 window.showMessages = showMessages;

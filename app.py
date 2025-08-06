@@ -408,6 +408,195 @@ def api_metrics():
             'summary': {'data_quality': 'error'}
         }), 500
 
+@app.route('/api/chart/sessions-by-date')
+def api_chart_sessions_by_date():
+    """
+    API endpoint to get sessions grouped by date for line chart
+    Supports date range filtering: 7, 30, or 90 days
+    """
+    try:
+        # Get date range parameter (default to 30 days)
+        days = int(request.args.get('days', 30))
+        
+        # Fetch all conversations
+        all_conversations = fetch_all('conversation')
+        if not all_conversations:
+            return jsonify({'labels': [], 'data': []})
+        
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        import json
+        
+        # Calculate start date
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Group conversations by date
+        date_counts = defaultdict(int)
+        
+        for conv in all_conversations:
+            created_date_str = conv.get('Created Date')
+            if created_date_str:
+                try:
+                    # Parse the date (assuming ISO format like 2025-08-05T19:11:20.107Z)
+                    created_date = datetime.fromisoformat(created_date_str.replace('Z', '+00:00'))
+                    created_date = created_date.replace(tzinfo=None)  # Remove timezone for comparison
+                    
+                    # Only include dates within range
+                    if start_date <= created_date <= end_date:
+                        date_key = created_date.strftime('%Y-%m-%d')
+                        date_counts[date_key] += 1
+                except (ValueError, TypeError) as e:
+                    app.logger.debug(f"Failed to parse date {created_date_str}: {e}")
+                    continue
+        
+        # Generate complete date range (fill missing dates with 0)
+        labels = []
+        data = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            date_key = current_date.strftime('%Y-%m-%d')
+            labels.append(date_key)
+            data.append(date_counts.get(date_key, 0))
+            current_date += timedelta(days=1)
+        
+        app.logger.info(f"Generated date chart data: {len(labels)} days, {sum(data)} total sessions")
+        return jsonify({
+            'labels': labels,
+            'data': data,
+            'total_sessions': sum(data)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/chart/sessions-by-date: {str(e)}")
+        return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
+
+@app.route('/api/chart/sessions-by-course')
+def api_chart_sessions_by_course():
+    """
+    API endpoint to get sessions grouped by course for bar chart
+    """
+    try:
+        # Fetch all conversations
+        all_conversations = fetch_all('conversation')
+        if not all_conversations:
+            return jsonify({'labels': [], 'data': []})
+        
+        # Fetch course data to get course names
+        all_courses = fetch_all('course')
+        course_name_map = {}
+        
+        if all_courses:
+            for course in all_courses:
+                course_id = course.get('_id')
+                course_name = course.get('course_name', course.get('name', course.get('title', f'Course {course_id[:8]}')))
+                if course_id:
+                    course_name_map[course_id] = course_name
+        
+        # Group conversations by course
+        from collections import Counter
+        course_counter = Counter()
+        
+        for conv in all_conversations:
+            course_id = conv.get('course_custom_variable_parent', 
+                              conv.get('course', 
+                                     conv.get('course_id')))
+            if course_id:
+                course_name = course_name_map.get(course_id, f'Course {course_id[:8]}')
+                course_counter[course_name] += 1
+        
+        # Sort by count (descending) and limit to top 10
+        sorted_courses = course_counter.most_common(10)
+        
+        labels = [course[0] for course in sorted_courses]
+        data = [course[1] for course in sorted_courses]
+        
+        app.logger.info(f"Generated course chart data: {len(labels)} courses, {sum(data)} total sessions")
+        return jsonify({
+            'labels': labels,
+            'data': data,
+            'total_sessions': sum(data)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/chart/sessions-by-course: {str(e)}")
+        return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
+
+@app.route('/api/chart/sessions-by-activity')
+def api_chart_sessions_by_activity():
+    """
+    API endpoint to get sessions grouped by activity type for bar chart
+    """
+    try:
+        # Get feature counts from metrics calculation
+        # This reuses the logic from /api/metrics
+        all_conversations = fetch_all('conversation')
+        if not all_conversations:
+            return jsonify({'labels': [], 'data': []})
+        
+        # Get conversation starter data
+        conversation_starters = fetch_all('conversation_starter')
+        starter_activity_map = {}
+        
+        if conversation_starters:
+            for starter in conversation_starters:
+                starter_id = starter.get('_id')
+                title_text = starter.get('title_text', '').lower()
+                
+                if starter_id and title_text:
+                    starter_activity_map[starter_id] = title_text
+        
+        # Initialize feature counters
+        feature_counters = {
+            'Quiz Me': 0,
+            'Review Terms': 0,
+            'Key Takeaways': 0,
+            'Simplify a Concept': 0,
+            'Study Hacks': 0,
+            'Motivate Me': 0
+        }
+        
+        # Count by activity type
+        for conv in all_conversations:
+            starter_id = conv.get('conversation_starter_custom_conversation_starter', 
+                               conv.get('conversation_starter', 
+                                      conv.get('starter_id')))
+            
+            if starter_id and starter_id in starter_activity_map:
+                activity = starter_activity_map[starter_id]
+                
+                # Map activity names to display names
+                if activity == 'quiz me':
+                    feature_counters['Quiz Me'] += 1
+                elif activity == 'review terms':
+                    feature_counters['Review Terms'] += 1
+                elif activity == 'key takeaways':
+                    feature_counters['Key Takeaways'] += 1
+                elif activity == 'simplify a concept':
+                    feature_counters['Simplify a Concept'] += 1
+                elif activity == 'study hacks':
+                    feature_counters['Study Hacks'] += 1
+                elif activity == 'motivate me':
+                    feature_counters['Motivate Me'] += 1
+        
+        # Sort by count (descending)
+        sorted_activities = sorted(feature_counters.items(), key=lambda x: x[1], reverse=True)
+        
+        labels = [activity[0] for activity in sorted_activities]
+        data = [activity[1] for activity in sorted_activities]
+        
+        app.logger.info(f"Generated activity chart data: {len(labels)} activities, {sum(data)} total sessions")
+        return jsonify({
+            'labels': labels,
+            'data': data,
+            'total_sessions': sum(data)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/chart/sessions-by-activity: {str(e)}")
+        return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
+
 @app.route('/api/conversations')
 def api_conversations():
     """

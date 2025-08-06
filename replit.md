@@ -2,7 +2,17 @@
 
 ## Overview
 
-This is a Flask-based web dashboard for the Assignment Assistant system that integrates with a Bubble API to manage assignment-related data. The application provides a clean, responsive web interface using Bootstrap with a dark theme, allowing users to interact with assignment data through a dashboard interface. The system is designed to fetch and display data from an external Bubble.io API service.
+This is a Flask-based web dashboard for the Assignment Assistant system that integrates with a Bubble API to manage assignment-related data. The application provides a clean, responsive web interface using Bootstrap with a dark theme, featuring interactive charts and real-time metrics. Users can view comprehensive analytics including activity counts, course distributions, conversation trends over time, and detailed session breakdowns through an intuitive dashboard interface.
+
+## Recent Changes (August 2025)
+
+- **Fixed Statistics Loading**: Resolved "Failed to load statistics" error by creating missing `/api/stats` endpoint
+- **Added Activity Counts**: Implemented feature-specific counting for Quiz Me, Review Terms, Key Takeaways, etc.
+- **Interactive Charts**: Added live Chart.js visualizations including:
+  - Sessions by Date (line chart with date range selection)
+  - Sessions by Course (bar chart) 
+  - Sessions by Activity Type (bar chart)
+- **Chart API Endpoints**: Created dedicated endpoints for chart data with proper date filtering and aggregation
 
 ## User Preferences
 
