@@ -99,8 +99,9 @@ def get_total_count(data_type, filter_user_messages=False):
         # For messages with user filter, we need to fetch all and count
         if data_type == 'message' and filter_user_messages:
             # Use constraints to filter for role = 'user'
+            # The Bubble API field is actually 'role_option_message_role' not just 'role'
             constraints = [{
-                'key': 'role',
+                'key': 'role_option_message_role',
                 'constraint_type': 'equals',
                 'value': 'user'
             }]
@@ -392,8 +393,9 @@ def api_metrics():
             else:
                 # Fetch all user messages and group by conversation
                 # Use constraints to filter for role = 'user'
+                # The Bubble API field is actually 'role_option_message_role' not just 'role'
                 constraints = [{
-                    'key': 'role',
+                    'key': 'role_option_message_role',
                     'constraint_type': 'equals',
                     'value': 'user'
                 }]
