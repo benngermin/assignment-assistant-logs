@@ -46,81 +46,19 @@ function initializeDashboard() {
     console.log('Event listeners set up');
 }
 
-// Initialize environment toggle functionality
+// Initialize environment toggle functionality (removed - now using live only)
 function initializeEnvironmentToggle() {
-    // Get current environment from server
-    fetch('/api/environment')
-        .then(response => response.json())
-        .then(data => {
-            const currentEnv = data.environment || 'dev';
-            
-            // Set the correct radio button
-            if (currentEnv === 'live') {
-                document.getElementById('env-live').checked = true;
-                document.getElementById('env-status').innerHTML = '<i class="fas fa-circle text-success"></i> Live';
-            } else {
-                document.getElementById('env-dev').checked = true;
-                document.getElementById('env-status').innerHTML = '<i class="fas fa-circle text-primary"></i> Dev';
-            }
-        })
-        .catch(error => {
-            console.error('Error getting environment:', error);
-        });
+    // Set status to always show Live
+    const statusElement = document.getElementById('env-status');
+    if (statusElement) {
+        statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live Data';
+    }
     
-    // Add event listeners to environment radio buttons
-    const envRadios = document.querySelectorAll('input[name="environment"]');
-    envRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            const newEnv = this.value;
-            
-            // Show loading state
-            const statusElement = document.getElementById('env-status');
-            statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Switching...';
-            
-            // Send environment change to server
-            fetch('/api/environment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ environment: newEnv })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                // Update status display
-                if (newEnv === 'live') {
-                    statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live';
-                    showAlert('success', 'Switched to Live environment');
-                } else {
-                    statusElement.innerHTML = '<i class="fas fa-circle text-primary"></i> Dev';
-                    showAlert('success', 'Switched to Dev environment');
-                }
-                
-                // Reload all data with new environment
-                loadStatistics();
-                loadConversations();
-                loadComprehensiveMetrics();
-                loadCharts();
-            })
-            .catch(error => {
-                console.error('Error switching environment:', error);
-                showAlert('danger', `Failed to switch environment: ${error.message}`);
-                
-                // Revert the radio button
-                if (newEnv === 'live') {
-                    document.getElementById('env-dev').checked = true;
-                    statusElement.innerHTML = '<i class="fas fa-circle text-primary"></i> Dev';
-                } else {
-                    document.getElementById('env-live').checked = true;
-                    statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live';
-                }
-            });
-        });
-    });
+    // Hide environment toggle if it exists
+    const envToggle = document.querySelector('.env-toggle');
+    if (envToggle) {
+        envToggle.style.display = 'none';
+    }
 }
 
 // Load basic statistics
