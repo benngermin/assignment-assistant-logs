@@ -12,25 +12,18 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
-def fetch_bubble_data(data_type, params=None, environment='dev'):
+def fetch_bubble_data(data_type, params=None):
     """
     Fetch data from Bubble API
     
     Args:
         data_type (str): The type of data to fetch from the API
         params (dict): Optional query parameters
-        environment (str): 'dev' for development or 'live' for production
         
     Returns:
         dict: JSON response from API or error information
     """
-    # Choose base URL based on environment
-    if environment == 'live':
-        base_url = 'https://assignmentassistants.theinstituteslab.org/api/1.1/obj/'
-    else:
-        base_url = 'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/'
-    
-    url = f'{base_url}{data_type}'
+    url = f'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/{data_type}'
     headers = {
         'Authorization': 'Bearer 7c62edca8f27655cd29e3f0f6a971748',
         'Content-Type': 'application/json'
@@ -64,14 +57,13 @@ def fetch_bubble_data(data_type, params=None, environment='dev'):
             'details': str(e)
         }
 
-def get_total_count(data_type, environment='dev'):
+def get_total_count(data_type):
     """
     Get the total count of items for a specific data type from Bubble API
     Using pagination to handle large datasets
     
     Args:
         data_type (str): The type of data to count
-        environment (str): 'dev' for development or 'live' for production
         
     Returns:
         int: Total count of items, or 0 if error
@@ -79,7 +71,7 @@ def get_total_count(data_type, environment='dev'):
     try:
         # Make initial call with limit=1 to get count and remaining
         params = {'limit': 1, 'cursor': 0}
-        data = fetch_bubble_data(data_type, params, environment)
+        data = fetch_bubble_data(data_type, params)
         
         if 'error' in data:
             app.logger.error(f"Error getting count for {data_type}: {data}")
@@ -97,14 +89,13 @@ def get_total_count(data_type, environment='dev'):
         app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
         return 0
 
-def fetch_all(data_type, custom_params=None, environment='dev'):
+def fetch_all(data_type, custom_params=None):
     """
     Fetch all items of a specific data type from Bubble API using pagination
     
     Args:
         data_type (str): The type of data to fetch
         custom_params (dict): Optional custom parameters like constraints or sorting
-        environment (str): 'dev' for development or 'live' for production
         
     Returns:
         list: All results from the API, or empty list if error
@@ -120,7 +111,7 @@ def fetch_all(data_type, custom_params=None, environment='dev'):
             if custom_params:
                 params.update(custom_params)
             
-            data = fetch_bubble_data(data_type, params, environment)
+            data = fetch_bubble_data(data_type, params)
             
             if 'error' in data:
                 app.logger.error(f"Error fetching all {data_type}: {data}")
@@ -177,8 +168,7 @@ def api_total_users():
     Returns: JSON with total_users count
     """
     try:
-        environment = request.args.get('env', 'dev')
-        total = get_total_count('user', environment)
+        total = get_total_count('user')
         return jsonify({'total_users': total})
     except Exception as e:
         app.logger.error(f"Error in /api/total_users: {str(e)}")
@@ -191,8 +181,7 @@ def api_total_conversations():
     Returns: JSON with total_conversations count
     """
     try:
-        environment = request.args.get('env', 'dev')
-        total = get_total_count('conversation', environment)
+        total = get_total_count('conversation')
         return jsonify({'total_conversations': total})
     except Exception as e:
         app.logger.error(f"Error in /api/total_conversations: {str(e)}")
@@ -205,8 +194,7 @@ def api_total_messages():
     Returns: JSON with total_messages count
     """
     try:
-        environment = request.args.get('env', 'dev')
-        total = get_total_count('message', environment)
+        total = get_total_count('message')
         return jsonify({'total_messages': total})
     except Exception as e:
         app.logger.error(f"Error in /api/total_messages: {str(e)}")
@@ -229,26 +217,23 @@ def api_stats():
             'messages_error': None
         }
         
-        # Get environment parameter
-        environment = request.args.get('env', 'dev')
-        
         # Get user count
         try:
-            stats['users'] = get_total_count('user', environment)
+            stats['users'] = get_total_count('user')
         except Exception as e:
             app.logger.error(f"Error getting user count: {str(e)}")
             stats['users_error'] = str(e)
         
         # Get conversation count
         try:
-            stats['conversations'] = get_total_count('conversation', environment)
+            stats['conversations'] = get_total_count('conversation')
         except Exception as e:
             app.logger.error(f"Error getting conversation count: {str(e)}")
             stats['conversations_error'] = str(e)
         
         # Get message count
         try:
-            stats['messages'] = get_total_count('message', environment)
+            stats['messages'] = get_total_count('message')
         except Exception as e:
             app.logger.error(f"Error getting message count: {str(e)}")
             stats['messages_error'] = str(e)
@@ -274,13 +259,10 @@ def api_metrics():
     Returns comprehensive metrics including counts, averages, and distributions
     """
     try:
-        # Get environment parameter
-        environment = request.args.get('env', 'dev')
-        
         # Get total counts
-        total_users = get_total_count('user', environment)
-        total_conversations = get_total_count('conversation', environment)
-        total_messages = get_total_count('message', environment)
+        total_users = get_total_count('user')
+        total_conversations = get_total_count('conversation')
+        total_messages = get_total_count('message')
         
         # Initialize metrics dictionary
         metrics = {
@@ -308,7 +290,7 @@ def api_metrics():
                 app.logger.info(f"Using simple average for messages per conversation: {metrics['avg_messages_per_conv']}")
             else:
                 # Fetch all messages and group by conversation
-                all_messages = fetch_all('message', None, environment)
+                all_messages = fetch_all('message')
                 if all_messages:
                     # Group messages by conversation ID
                     messages_by_conv = Counter()
@@ -327,7 +309,7 @@ def api_metrics():
                     metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2) if total_conversations > 0 else 0
         
         # Fetch all conversations for grouping by course and assignment
-        all_conversations = fetch_all('conversation', None, environment)
+        all_conversations = fetch_all('conversation')
         if all_conversations:
             # Group conversations by course
             course_counter = Counter()
@@ -344,7 +326,7 @@ def api_metrics():
             }
             
             # Get conversation starter data to identify activity types
-            conversation_starters = fetch_all('conversation_starter', None, environment)
+            conversation_starters = fetch_all('conversation_starter')
             starter_activity_map = {}
             
             if conversation_starters:
@@ -358,7 +340,7 @@ def api_metrics():
             app.logger.info(f"Found {len(starter_activity_map)} conversation starters with activity mappings")
             
             # Fetch course data for proper naming in metrics
-            all_courses = fetch_all('course', None, environment)
+            all_courses = fetch_all('course')
             course_name_map = {}
             
             if all_courses:
@@ -375,7 +357,7 @@ def api_metrics():
                         course_name_map[course_id] = course_name
             
             # Fetch assignment data for proper naming in metrics
-            all_assignments = fetch_all('assignment', None, environment)
+            all_assignments = fetch_all('assignment')
             assignment_name_map = {}
             
             if all_assignments:
@@ -479,10 +461,9 @@ def api_chart_sessions_by_date():
         # Get parameters
         days = int(request.args.get('days', 30))
         grouping = request.args.get('grouping', 'days')  # days, weeks, months
-        environment = request.args.get('env', 'dev')
         
         # Fetch all conversations
-        all_conversations = fetch_all('conversation', None, environment)
+        all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
@@ -577,16 +558,13 @@ def api_chart_sessions_by_course():
     API endpoint to get sessions grouped by course for bar chart
     """
     try:
-        # Get environment parameter
-        environment = request.args.get('env', 'dev')
-        
         # Fetch all conversations
-        all_conversations = fetch_all('conversation', None, environment)
+        all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
         # Fetch course data to get course names
-        all_courses = fetch_all('course', None, environment)
+        all_courses = fetch_all('course')
         course_name_map = {}
         
         if all_courses:
@@ -638,16 +616,13 @@ def api_chart_sessions_by_assignment():
     Returns assignment names and session counts.
     """
     try:
-        # Get environment parameter
-        environment = request.args.get('env', 'dev')
-        
         # Get all conversations
-        all_conversations = fetch_all('conversation', None, environment)
+        all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': [], 'total_sessions': 0})
         
         # Fetch assignment data for proper naming
-        all_assignments = fetch_all('assignment', None, environment)
+        all_assignments = fetch_all('assignment')
         assignment_name_map = {}
         
         if all_assignments:
@@ -700,17 +675,14 @@ def api_chart_sessions_by_activity():
     API endpoint to get sessions grouped by activity type for bar chart
     """
     try:
-        # Get environment parameter
-        environment = request.args.get('env', 'dev')
-        
         # Get feature counts from metrics calculation
         # This reuses the logic from /api/metrics
-        all_conversations = fetch_all('conversation', None, environment)
+        all_conversations = fetch_all('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
         # Get conversation starter data
-        conversation_starters = fetch_all('conversation_starter', None, environment)
+        conversation_starters = fetch_all('conversation_starter')
         starter_activity_map = {}
         
         if conversation_starters:
@@ -808,14 +780,11 @@ def api_conversations():
         if constraints:
             params['constraints'] = json.dumps(constraints)
         
-        # Get environment parameter  
-        environment = request.args.get('env', 'dev')
-        
         # Fetch all conversations with sorting and optional filters
-        conversations = fetch_all('conversation', params, environment)
+        conversations = fetch_all('conversation', params)
         
         # Fetch course data for proper naming in conversation list
-        all_courses = fetch_all('course', None, environment)
+        all_courses = fetch_all('course')
         course_name_map = {}
         
         if all_courses:
@@ -832,7 +801,7 @@ def api_conversations():
                     course_name_map[course_id] = course_name
         
         # Fetch assignment data for proper naming in conversation list
-        all_assignments = fetch_all('assignment', None, environment)
+        all_assignments = fetch_all('assignment')
         assignment_name_map = {}
         
         if all_assignments:
