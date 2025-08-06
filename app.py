@@ -271,7 +271,14 @@ def api_metrics():
             'total_messages': total_messages,
             'avg_messages_per_conv': 0,
             'convs_per_course': {},
-            'convs_per_assignment': {}
+            'convs_per_assignment': {},
+            # Feature counts
+            'quiz_count': 0,
+            'review_count': 0,
+            'takeaway_count': 0,
+            'simplify_count': 0,
+            'study_count': 0,
+            'motivate_count': 0
         }
         
         # Calculate average messages per conversation
@@ -308,6 +315,30 @@ def api_metrics():
             course_counter = Counter()
             assignment_counter = Counter()
             
+            # Initialize feature counters
+            feature_counters = {
+                'quiz_count': 0,
+                'review_count': 0,
+                'takeaway_count': 0,
+                'simplify_count': 0,
+                'study_count': 0,
+                'motivate_count': 0
+            }
+            
+            # Get conversation starter data to identify activity types
+            conversation_starters = fetch_all('conversation_starter')
+            starter_activity_map = {}
+            
+            if conversation_starters:
+                for starter in conversation_starters:
+                    starter_id = starter.get('_id')
+                    title_text = starter.get('title_text', '').lower()
+                    
+                    if starter_id and title_text:
+                        starter_activity_map[starter_id] = title_text
+                        
+            app.logger.info(f"Found {len(starter_activity_map)} conversation starters with activity mappings")
+            
             for conv in all_conversations:
                 # Count by course field (assuming it exists as reference ID)
                 course_id = conv.get('course', conv.get('course_id', conv.get('Course')))
@@ -318,6 +349,33 @@ def api_metrics():
                 assignment_id = conv.get('assignment', conv.get('assignment_id', conv.get('Assignment')))
                 if assignment_id:
                     assignment_counter[str(assignment_id)] += 1
+                
+                # Count by activity type based on conversation starter
+                starter_id = conv.get('conversation_starter_custom_conversation_starter', 
+                                   conv.get('conversation_starter', 
+                                          conv.get('starter_id')))
+                
+                if starter_id and starter_id in starter_activity_map:
+                    activity = starter_activity_map[starter_id]
+                    
+                    # Map activity names to counter keys based on title_text
+                    if activity == 'quiz me':
+                        feature_counters['quiz_count'] += 1
+                    elif activity == 'review terms':
+                        feature_counters['review_count'] += 1
+                    elif activity == 'key takeaways':
+                        feature_counters['takeaway_count'] += 1
+                    elif activity == 'simplify a concept':
+                        feature_counters['simplify_count'] += 1
+                    elif activity == 'study hacks':
+                        feature_counters['study_count'] += 1
+                    elif activity == 'motivate me':
+                        feature_counters['motivate_count'] += 1
+                    else:
+                        app.logger.debug(f"Unknown activity type: {activity}")
+            
+            # Update metrics with feature counts
+            metrics.update(feature_counters)
             
             # Convert counters to dictionaries
             metrics['convs_per_course'] = dict(course_counter)
@@ -325,6 +383,7 @@ def api_metrics():
             
             app.logger.info(f"Found {len(course_counter)} unique courses with conversations")
             app.logger.info(f"Found {len(assignment_counter)} unique assignments with conversations")
+            app.logger.info(f"Feature counts: {feature_counters}")
         
         # Add summary statistics
         metrics['summary'] = {
