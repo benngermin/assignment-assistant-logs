@@ -3,7 +3,7 @@ import logging
 import json
 import requests
 from collections import Counter
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -23,7 +23,15 @@ def fetch_bubble_data(data_type, params=None):
     Returns:
         dict: JSON response from API or error information
     """
-    url = f'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/{data_type}'
+    # Get environment from session or default to 'dev'
+    env = session.get('environment', 'dev')
+    
+    # Build URL based on environment
+    if env == 'live':
+        url = f'https://assignmentassistants.theinstituteslab.org/api/1.1/obj/{data_type}'
+    else:  # dev
+        url = f'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/{data_type}'
+    
     headers = {
         'Authorization': 'Bearer 7c62edca8f27655cd29e3f0f6a971748',
         'Content-Type': 'application/json'
@@ -143,7 +151,44 @@ def index():
     """
     Main dashboard route - serves the index.html template
     """
+    # Set default environment if not set
+    if 'environment' not in session:
+        session['environment'] = 'dev'
     return render_template('index.html')
+
+@app.route('/api/environment', methods=['GET', 'POST'])
+def api_environment():
+    """
+    API endpoint to get or set the current environment
+    GET: Returns current environment
+    POST: Sets the environment (expects JSON with 'environment' field)
+    """
+    if request.method == 'GET':
+        # Get current environment from session, default to 'dev'
+        env = session.get('environment', 'dev')
+        return jsonify({'environment': env})
+    
+    else:  # POST method
+        try:
+            data = request.get_json()
+            new_env = data.get('environment', 'dev')
+            
+            # Validate environment value
+            if new_env not in ['dev', 'live']:
+                return jsonify({'error': 'Invalid environment. Must be "dev" or "live"'}), 400
+            
+            # Set environment in session
+            session['environment'] = new_env
+            app.logger.info(f"Environment switched to: {new_env}")
+            
+            return jsonify({
+                'environment': new_env,
+                'message': f'Successfully switched to {new_env} environment'
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error setting environment: {str(e)}")
+            return jsonify({'error': 'Failed to set environment', 'details': str(e)}), 500
 
 @app.route('/test')
 def test_api():

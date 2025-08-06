@@ -44,6 +44,73 @@ body {
     color: #5a67d8;
 }
 
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Environment Toggle Styles */
+.environment-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.environment-toggle .btn-group {
+    display: inline-flex;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.environment-toggle .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.environment-toggle .btn-outline-primary {
+    background: white;
+    color: #5a67d8;
+    border: 1px solid #5a67d8;
+}
+
+.environment-toggle .btn-outline-primary:hover {
+    background: #f0f4ff;
+}
+
+.environment-toggle .btn-check:checked + .btn-outline-primary {
+    background: #5a67d8;
+    color: white;
+}
+
+.environment-toggle .btn-outline-success {
+    background: white;
+    color: #48bb78;
+    border: 1px solid #48bb78;
+}
+
+.environment-toggle .btn-outline-success:hover {
+    background: #f0fdf4;
+}
+
+.environment-toggle .btn-check:checked + .btn-outline-success {
+    background: #48bb78;
+    color: white;
+}
+
+#env-status {
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#env-status .fa-circle {
+    font-size: 0.5rem;
+}
+
 .btn-activity {
     background: white;
     border: 2px solid #e2e8f0;
