@@ -158,8 +158,8 @@ function loadStatistics() {
             }
         })
         .catch(error => {
-            console.error('Error loading statistics:', error);
-            showAlert('danger', 'Failed to load statistics. Please try again.');
+            console.error('Error loading statistics:', error.message || error);
+            showAlert('danger', 'Failed to load statistics: ' + (error.message || 'Please try again.'));
             
             // Show zeros on error
             updateStatElement('total-users', 0);
@@ -174,7 +174,12 @@ function loadComprehensiveMetrics() {
     console.log('Loading comprehensive metrics...');
     
     fetch('/api/metrics')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             // Update feature counts
             updateStatElement('quiz-count', data.quiz_count || 0);
@@ -191,7 +196,7 @@ function loadComprehensiveMetrics() {
             }
         })
         .catch(error => {
-            console.error('Error loading metrics:', error);
+            console.error('Error loading metrics:', error.message || error);
             
             // Set all counts to 0 on error
             updateStatElement('quiz-count', 0);
@@ -315,7 +320,7 @@ function loadConversations() {
             });
         })
         .catch(error => {
-            console.error('Error loading conversations:', error);
+            console.error('Error loading conversations:', error.message || error);
             conversationsList.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -494,7 +499,12 @@ function loadDateChart(days = 30, grouping = 'days') {
     console.log(`Loading date chart for ${days} days, grouped by ${grouping}...`);
     
     fetch(`/api/chart/sessions-by-date?days=${days}&grouping=${grouping}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const ctx = document.getElementById('dateChart').getContext('2d');
             
@@ -572,7 +582,7 @@ function loadDateChart(days = 30, grouping = 'days') {
             });
         })
         .catch(error => {
-            console.error('Error loading date chart:', error);
+            console.error('Error loading date chart:', error.message || error);
         });
 }
 
@@ -580,7 +590,12 @@ function loadCourseChart() {
     console.log('Loading course chart...');
     
     fetch('/api/chart/sessions-by-course')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const ctx = document.getElementById('courseChart').getContext('2d');
             
@@ -635,7 +650,7 @@ function loadCourseChart() {
             });
         })
         .catch(error => {
-            console.error('Error loading course chart:', error);
+            console.error('Error loading course chart:', error.message || error);
         });
 }
 
@@ -643,7 +658,12 @@ function loadActivityChart() {
     console.log('Loading activity chart...');
     
     fetch('/api/chart/sessions-by-activity')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const ctx = document.getElementById('activityChart').getContext('2d');
             
@@ -698,7 +718,7 @@ function loadActivityChart() {
             });
         })
         .catch(error => {
-            console.error('Error loading activity chart:', error);
+            console.error('Error loading activity chart:', error.message || error);
         });
 }
 

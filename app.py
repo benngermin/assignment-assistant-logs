@@ -4,6 +4,8 @@ import json
 import requests
 from collections import Counter
 from flask import Flask, render_template, jsonify, request, session
+from datetime import datetime, timedelta
+import time
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -11,6 +13,21 @@ logging.basicConfig(level=logging.DEBUG)
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+
+# Simple in-memory cache with all data types
+cache = {
+    'conversations': {'data': None, 'timestamp': 0, 'env': None},
+    'users': {'data': None, 'timestamp': 0, 'env': None},
+    'courses': {'data': None, 'timestamp': 0, 'env': None},
+    'assignments': {'data': None, 'timestamp': 0, 'env': None},
+    'conversation_starters': {'data': None, 'timestamp': 0, 'env': None},
+    'conversation': {'data': None, 'timestamp': 0, 'env': None},
+    'user': {'data': None, 'timestamp': 0, 'env': None},
+    'course': {'data': None, 'timestamp': 0, 'env': None},
+    'conversation_starter': {'data': None, 'timestamp': 0, 'env': None},
+    'message': {'data': None, 'timestamp': 0, 'env': None}
+}
+CACHE_TTL = 600  # Cache for 10 minutes for better performance
 
 def fetch_bubble_data(data_type, params=None):
     """
@@ -50,14 +67,14 @@ def fetch_bubble_data(data_type, params=None):
                 'details': 'Please set the BUBBLE_API_KEY environment variable'
             }
     
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
+    # Add API key to params instead of headers for Bubble API
+    if params is None:
+        params = {}
+    params['api_token'] = api_key
     
     try:
         app.logger.debug(f"Making API request to: {url}")
-        response = requests.get(url, headers=headers, params=params, timeout=30)
+        response = requests.get(url, params=params, timeout=60)
         
         if response.status_code == 200:
             json_data = response.json()
@@ -202,6 +219,7 @@ def fetch_all(data_type, custom_params=None):
     all_results = []
     cursor = 0
     limit = 100
+    max_items = 5000  # Limit total items to prevent excessive loading
     
     try:
         while True:
@@ -220,6 +238,12 @@ def fetch_all(data_type, custom_params=None):
             results = data.get('results', [])
             all_results.extend(results)
             
+            # Check if we've reached the maximum
+            if len(all_results) >= max_items:
+                app.logger.info(f"Reached maximum items limit ({max_items}) for {data_type}")
+                all_results = all_results[:max_items]  # Trim to max
+                break
+            
             # Check if there are more items
             remaining = data.get('remaining', 0)
             if remaining == 0:
@@ -236,6 +260,47 @@ def fetch_all(data_type, custom_params=None):
     except Exception as e:
         app.logger.error(f"Exception in fetch_all for {data_type}: {str(e)}")
         return []
+
+def fetch_all_cached(data_type, custom_params=None):
+    """
+    Fetch all items with caching to improve performance
+    
+    Args:
+        data_type (str): The type of data to fetch
+        custom_params (dict): Optional custom parameters
+        
+    Returns:
+        list: All results from the API cache or fresh fetch
+    """
+    current_env = session.get('environment', 'dev')
+    current_time = time.time()
+    
+    # Check if we have valid cache for this data type and environment
+    if data_type in cache:
+        cache_entry = cache[data_type]
+        if (cache_entry['data'] is not None and 
+            cache_entry['env'] == current_env and
+            current_time - cache_entry['timestamp'] < CACHE_TTL):
+            cache_age = int(current_time - cache_entry['timestamp'])
+            app.logger.info(f"Using cached data for {data_type} (age: {cache_age}s, items: {len(cache_entry['data'])})")
+            return cache_entry['data']
+    
+    # Fetch fresh data
+    app.logger.info(f"Fetching fresh data for {data_type} (cache miss or expired)")
+    start_time = time.time()
+    data = fetch_all(data_type, custom_params)
+    fetch_time = time.time() - start_time
+    
+    # Update cache
+    if data_type in cache:
+        cache[data_type] = {
+            'data': data,
+            'timestamp': current_time,
+            'env': current_env
+        }
+        app.logger.info(f"Cached {len(data)} items for {data_type} (fetch took {fetch_time:.2f}s)")
+    
+    return data
 
 @app.route('/')
 def index():
@@ -607,13 +672,13 @@ def api_chart_sessions_by_date():
         days = int(request.args.get('days', 30))
         grouping = request.args.get('grouping', 'days')  # days, weeks, months
         
-        # Fetch all conversations
-        all_conversations = fetch_all('conversation')
+        # Fetch all conversations with caching
+        all_conversations = fetch_all_cached('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
-        # Fetch user data to filter out excluded emails
-        all_users = fetch_all('user')
+        # Fetch user data to filter out excluded emails with caching
+        all_users = fetch_all_cached('user')
         user_email_map = {}
         
         if all_users:
@@ -725,13 +790,13 @@ def api_chart_sessions_by_course():
     API endpoint to get sessions grouped by course for bar chart
     """
     try:
-        # Fetch all conversations
-        all_conversations = fetch_all('conversation')
+        # Fetch all conversations with caching
+        all_conversations = fetch_all_cached('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
-        # Fetch user data to filter out excluded emails
-        all_users = fetch_all('user')
+        # Fetch user data to filter out excluded emails with caching
+        all_users = fetch_all_cached('user')
         user_email_map = {}
         
         if all_users:
@@ -752,8 +817,8 @@ def api_chart_sessions_by_course():
         
         all_conversations = filtered_conversations
         
-        # Fetch course data to get course names
-        all_courses = fetch_all('course')
+        # Fetch course data to get course names with caching
+        all_courses = fetch_all_cached('course')
         course_name_map = {}
         
         if all_courses:
@@ -867,12 +932,12 @@ def api_chart_sessions_by_activity():
     try:
         # Get feature counts from metrics calculation
         # This reuses the logic from /api/metrics
-        all_conversations = fetch_all('conversation')
+        all_conversations = fetch_all_cached('conversation')
         if not all_conversations:
             return jsonify({'labels': [], 'data': []})
         
         # Fetch user data to filter out excluded emails
-        all_users = fetch_all('user')
+        all_users = fetch_all_cached('user')
         user_email_map = {}
         
         if all_users:
@@ -893,8 +958,8 @@ def api_chart_sessions_by_activity():
         
         all_conversations = filtered_conversations
         
-        # Get conversation starter data
-        conversation_starters = fetch_all('conversation_starter')
+        # Get conversation starter data with caching
+        conversation_starters = fetch_all_cached('conversation_starter')
         starter_activity_map = {}
         
         if conversation_starters:
