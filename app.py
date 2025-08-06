@@ -83,20 +83,36 @@ def fetch_bubble_data(data_type, params=None):
             'details': str(e)
         }
 
-def get_total_count(data_type):
+def get_total_count(data_type, filter_user_messages=False):
     """
     Get the total count of items for a specific data type from Bubble API
     Using pagination to handle large datasets
     
     Args:
         data_type (str): The type of data to count
+        filter_user_messages (bool): If True and data_type is 'message', count only user messages
         
     Returns:
         int: Total count of items, or 0 if error
     """
     try:
-        # Make initial call with limit=1 to get count and remaining
-        params = {'limit': 1, 'cursor': 0}
+        # For messages with user filter, we need to fetch all and count
+        if data_type == 'message' and filter_user_messages:
+            # Use constraints to filter for role = 'user'
+            constraints = [{
+                'key': 'role',
+                'constraint_type': 'equals',
+                'value': 'user'
+            }]
+            params = {
+                'constraints': json.dumps(constraints),
+                'limit': 1,
+                'cursor': 0
+            }
+        else:
+            # Make initial call with limit=1 to get count and remaining
+            params = {'limit': 1, 'cursor': 0}
+        
         data = fetch_bubble_data(data_type, params)
         
         if 'error' in data:
@@ -316,9 +332,9 @@ def api_stats():
             app.logger.error(f"Error getting conversation count: {str(e)}")
             stats['conversations_error'] = str(e)
         
-        # Get message count
+        # Get message count (only user messages)
         try:
-            stats['messages'] = get_total_count('message')
+            stats['messages'] = get_total_count('message', filter_user_messages=True)
         except Exception as e:
             app.logger.error(f"Error getting message count: {str(e)}")
             stats['messages_error'] = str(e)
@@ -347,7 +363,7 @@ def api_metrics():
         # Get total counts
         total_users = get_total_count('user')
         total_conversations = get_total_count('conversation')
-        total_messages = get_total_count('message')
+        total_messages = get_total_count('message', filter_user_messages=True)  # Only count user messages
         
         # Initialize metrics dictionary
         metrics = {
@@ -374,10 +390,19 @@ def api_metrics():
                 metrics['avg_messages_per_conv'] = round(total_messages / total_conversations, 2)
                 app.logger.info(f"Using simple average for messages per conversation: {metrics['avg_messages_per_conv']}")
             else:
-                # Fetch all messages and group by conversation
-                all_messages = fetch_all('message')
+                # Fetch all user messages and group by conversation
+                # Use constraints to filter for role = 'user'
+                constraints = [{
+                    'key': 'role',
+                    'constraint_type': 'equals',
+                    'value': 'user'
+                }]
+                params = {
+                    'constraints': json.dumps(constraints)
+                }
+                all_messages = fetch_all('message', params)
                 if all_messages:
-                    # Group messages by conversation ID
+                    # Group messages by conversation ID (already filtered for user messages)
                     messages_by_conv = Counter()
                     for message in all_messages:
                         conv_id = message.get('conversation', message.get('conversation_id'))
@@ -1065,14 +1090,26 @@ def api_conversation_messages(conv_id):
     """
     API endpoint to fetch messages for a specific conversation
     Returns list of messages sorted by Created Date
+    Optionally filter for user messages only with ?user_only=true
     """
     try:
+        # Check if we should filter for user messages only
+        user_only = request.args.get('user_only', '').lower() == 'true'
+        
         # Create constraint to filter messages by conversation ID
         constraints = [{
             'key': 'conversation',
             'constraint_type': 'equals',
             'value': conv_id
         }]
+        
+        # Add role filter if user_only is requested
+        if user_only:
+            constraints.append({
+                'key': 'role',
+                'constraint_type': 'equals',
+                'value': 'user'
+            })
         
         # Convert constraints to JSON string
         params = {
@@ -1086,20 +1123,25 @@ def api_conversation_messages(conv_id):
         
         # Extract key fields from each message
         result = []
+        user_message_count = 0
         for msg in messages:
+            role = msg.get('role', msg.get('sender_type', 'user'))
+            if role == 'user':
+                user_message_count += 1
             result.append({
                 '_id': msg.get('_id'),
                 'text': msg.get('text', msg.get('content', '')),
-                'role': msg.get('role', msg.get('sender_type', 'user')),
+                'role': role,
                 'Created Date': msg.get('Created Date'),
                 'conversation': msg.get('conversation', conv_id),
                 'user': msg.get('user', msg.get('user_id'))
             })
         
-        app.logger.info(f"Successfully fetched {len(result)} messages for conversation {conv_id}")
+        app.logger.info(f"Successfully fetched {len(result)} messages for conversation {conv_id} (user_only={user_only})")
         return jsonify({
             'conversation_id': conv_id,
             'message_count': len(result),
+            'user_message_count': user_message_count,
             'messages': result
         })
         
