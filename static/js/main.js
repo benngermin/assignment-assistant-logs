@@ -35,11 +35,36 @@ function initializeDashboard() {
     const refreshBtn = document.querySelector('.btn-activity');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function() {
-            loadStatistics();
-            loadConversations();
-            loadComprehensiveMetrics();
-            loadCharts();
-            showAlert('success', 'Data refreshed successfully!');
+            // Show loading state
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+            
+            // Track completion of all refresh operations
+            let completedOperations = 0;
+            const totalOperations = 4;
+            let hasErrors = false;
+            
+            const checkCompletion = () => {
+                completedOperations++;
+                if (completedOperations === totalOperations) {
+                    // Reset button
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
+                    
+                    // Show appropriate message
+                    if (hasErrors) {
+                        showAlert('warning', 'Data refresh completed with some issues. API connections may be limited.');
+                    } else {
+                        showAlert('success', 'Data refreshed successfully!');
+                    }
+                }
+            };
+            
+            // Load data with error tracking
+            loadStatistics().finally(() => checkCompletion());
+            loadConversations().finally(() => checkCompletion());
+            loadComprehensiveMetrics().finally(() => checkCompletion());
+            loadCharts().finally(() => checkCompletion());
         });
     }
     
@@ -59,7 +84,7 @@ function initializeLiveStatus() {
 function loadStatistics() {
     console.log('Loading statistics...');
     
-    fetch('/api/stats')
+    return fetch('/api/stats')
         .then(response => response.json())
         .then(data => {
             // Update statistics in the UI
@@ -105,7 +130,7 @@ function loadStatistics() {
 function loadComprehensiveMetrics() {
     console.log('Loading comprehensive metrics...');
     
-    fetch('/api/metrics')
+    return fetch('/api/metrics')
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -165,7 +190,7 @@ function loadConversations() {
         </div>
     `;
     
-    fetch(url)
+    return fetch(url)
         .then(response => response.json())
         .then(conversations => {
             if (conversations.length === 0) {
@@ -422,15 +447,17 @@ const chartColors = {
 // Load chart data and create charts
 function loadCharts() {
     console.log('Loading charts...');
-    loadDateChart();
-    loadCourseChart();
-    loadActivityChart();
+    return Promise.all([
+        loadDateChart(),
+        loadCourseChart(), 
+        loadActivityChart()
+    ]);
 }
 
 function loadDateChart(days = 30, grouping = 'days') {
     console.log(`Loading date chart for ${days} days, grouped by ${grouping}...`);
     
-    fetch(`/api/chart/sessions-by-date?days=${days}&grouping=${grouping}`)
+    return fetch(`/api/chart/sessions-by-date?days=${days}&grouping=${grouping}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -521,7 +548,7 @@ function loadDateChart(days = 30, grouping = 'days') {
 function loadCourseChart() {
     console.log('Loading course chart...');
     
-    fetch('/api/chart/sessions-by-course')
+    return fetch('/api/chart/sessions-by-course')
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -589,7 +616,7 @@ function loadCourseChart() {
 function loadActivityChart() {
     console.log('Loading activity chart...');
     
-    fetch('/api/chart/sessions-by-activity')
+    return fetch('/api/chart/sessions-by-activity')
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
