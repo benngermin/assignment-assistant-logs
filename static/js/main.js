@@ -424,8 +424,8 @@ function showMessages(conversationId) {
 function updateStatElement(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-        // Remove spinner and add value with animation
-        element.innerHTML = value;
+        // Remove spinner and add value with animation using textContent for safety
+        element.textContent = value;
         element.style.opacity = '0';
         setTimeout(() => {
             element.style.transition = 'opacity 0.5s ease';
