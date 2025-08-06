@@ -1,5 +1,6 @@
 // Assignment Assistant Dashboard - Compact Version
 let mainChart;
+let currentEnvironment = 'dev'; // Default to dev environment
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Assignment Assistant Dashboard loaded');
@@ -22,6 +23,7 @@ function setupEventListeners() {
     // Date range and grouping controls
     const dateRange = document.getElementById('date-range');
     const grouping = document.getElementById('grouping');
+    const envSelector = document.getElementById('env-selector');
     
     if (dateRange) {
         dateRange.addEventListener('change', function() {
@@ -32,6 +34,15 @@ function setupEventListeners() {
     if (grouping) {
         grouping.addEventListener('change', function() {
             loadMainChart();
+        });
+    }
+    
+    if (envSelector) {
+        envSelector.addEventListener('change', function() {
+            currentEnvironment = this.value;
+            console.log(`Switched to ${currentEnvironment} environment`);
+            // Reload all data for the new environment
+            loadAllData();
         });
     }
     
@@ -48,7 +59,7 @@ function loadAllData() {
 async function loadMetrics() {
     try {
         console.log('Loading metrics...');
-        const response = await fetch('/api/metrics');
+        const response = await fetch(`/api/metrics?env=${currentEnvironment}`);
         const data = await response.json();
         
         // Update quick stats
@@ -82,7 +93,7 @@ async function loadMainChart() {
         
         console.log(`Loading main chart for ${dateRange} days, grouped by ${grouping}...`);
         
-        const response = await fetch(`/api/chart/sessions-by-date?days=${dateRange}&grouping=${grouping}`);
+        const response = await fetch(`/api/chart/sessions-by-date?days=${dateRange}&grouping=${grouping}&env=${currentEnvironment}`);
         const data = await response.json();
         
         // Destroy existing chart
@@ -160,7 +171,7 @@ async function loadMainChart() {
 async function loadCourseStats() {
     try {
         console.log('Loading course stats...');
-        const response = await fetch('/api/chart/sessions-by-course');
+        const response = await fetch(`/api/chart/sessions-by-course?env=${currentEnvironment}`);
         const data = await response.json();
         
         const courseList = document.getElementById('course-list');

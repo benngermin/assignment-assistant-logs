@@ -24,8 +24,17 @@
     <div class="compact-container">
         <!-- Header -->
         <div class="compact-header">
-            <img src="{{ url_for('static', filename='moodle-icon.png') }}" alt="Assignment Assistant" class="header-icon">
-            <h1>Assignment Assistant</h1>
+            <div class="header-left">
+                <img src="{{ url_for('static', filename='moodle-icon.png') }}" alt="Assignment Assistant" class="header-icon">
+                <h1>Assignment Assistant</h1>
+            </div>
+            <div class="env-toggle">
+                <label class="toggle-label">Environment:</label>
+                <select id="env-selector" class="env-select">
+                    <option value="dev" selected>Development</option>
+                    <option value="live">Live</option>
+                </select>
+            </div>
         </div>
 
         <!-- Quick Stats -->
