@@ -34,37 +34,65 @@ function initializeDashboard() {
     // Set up refresh button
     const refreshBtn = document.querySelector('.btn-activity');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', function() {
+        refreshBtn.addEventListener('click', async function() {
             // Show loading state
             refreshBtn.disabled = true;
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing with Bubble API...';
             
-            // Track completion of all refresh operations
-            let completedOperations = 0;
-            const totalOperations = 4;
-            let hasErrors = false;
-            
-            const checkCompletion = () => {
-                completedOperations++;
-                if (completedOperations === totalOperations) {
-                    // Reset button
+            try {
+                // First, trigger database sync from Bubble API
+                const syncResponse = await fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const syncResult = await syncResponse.json();
+                
+                if (syncResult.success) {
+                    // Update button to show loading dashboard data
+                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading dashboard...';
+                    
+                    // Show sync message
+                    showAlert('info', syncResult.message || 'Data sync completed');
+                    
+                    // Now reload all dashboard data from database
+                    let completedOperations = 0;
+                    const totalOperations = 4;
+                    let hasErrors = false;
+                    
+                    const checkCompletion = () => {
+                        completedOperations++;
+                        if (completedOperations === totalOperations) {
+                            // Reset button
+                            refreshBtn.disabled = false;
+                            refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
+                            
+                            // Show final message
+                            if (!hasErrors) {
+                                showAlert('success', 'Dashboard updated with latest data!');
+                            }
+                        }
+                    };
+                    
+                    // Load data from database
+                    loadStatistics().catch(() => { hasErrors = true; }).finally(() => checkCompletion());
+                    loadConversations().catch(() => { hasErrors = true; }).finally(() => checkCompletion());
+                    loadComprehensiveMetrics().catch(() => { hasErrors = true; }).finally(() => checkCompletion());
+                    loadCharts().catch(() => { hasErrors = true; }).finally(() => checkCompletion());
+                } else {
+                    // Sync failed
+                    showAlert('danger', 'Failed to sync data: ' + (syncResult.error || 'Unknown error'));
                     refreshBtn.disabled = false;
                     refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
-                    
-                    // Show appropriate message
-                    if (hasErrors) {
-                        showAlert('warning', 'Data refresh completed with some issues. API connections may be limited.');
-                    } else {
-                        showAlert('success', 'Data refreshed successfully!');
-                    }
                 }
-            };
-            
-            // Load data with error tracking
-            loadStatistics().finally(() => checkCompletion());
-            loadConversations().finally(() => checkCompletion());
-            loadComprehensiveMetrics().finally(() => checkCompletion());
-            loadCharts().finally(() => checkCompletion());
+            } catch (error) {
+                console.error('Error during refresh:', error);
+                showAlert('danger', 'Failed to refresh data: ' + error.message);
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
+            }
         });
     }
     

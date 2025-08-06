@@ -4,15 +4,40 @@ import json
 import requests
 from collections import Counter
 from flask import Flask, render_template, jsonify, request, session
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime, timedelta
 import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
+# Database base class
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
+
+# Configure database
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
+    db.init_app(app)
+    
+    # Initialize database tables
+    with app.app_context():
+        import models
+        db.create_all()
+else:
+    app.logger.warning("No DATABASE_URL found, running without database")
 
 # Simple in-memory cache with all data types
 cache = {
@@ -387,36 +412,44 @@ def api_stats():
     Returns: JSON with users, conversations, messages counts and any API errors
     """
     try:
-        # Initialize response with default values
-        stats = {
-            'users': 0,
-            'conversations': 0,
-            'messages': 0,
-            'users_error': None,
-            'conversations_error': None,
-            'messages_error': None
-        }
+        from database_queries import get_statistics
         
-        # Get user count
-        try:
-            stats['users'] = get_total_count('user')
-        except Exception as e:
-            app.logger.error(f"Error getting user count: {str(e)}")
-            stats['users_error'] = str(e)
+        # Try to get stats from database first
+        stats = get_statistics()
         
-        # Get conversation count
-        try:
-            stats['conversations'] = get_total_count('conversation')
-        except Exception as e:
-            app.logger.error(f"Error getting conversation count: {str(e)}")
-            stats['conversations_error'] = str(e)
-        
-        # Get message count (only user messages)
-        try:
-            stats['messages'] = get_total_count('message', filter_user_messages=True)
-        except Exception as e:
-            app.logger.error(f"Error getting message count: {str(e)}")
-            stats['messages_error'] = str(e)
+        # If database is empty, fall back to API
+        if stats['users'] == 0 and stats['conversations'] == 0:
+            app.logger.info("Database empty, using API fallback for stats")
+            # Initialize response with default values
+            stats = {
+                'users': 0,
+                'conversations': 0,
+                'messages': 0,
+                'users_error': None,
+                'conversations_error': None,
+                'messages_error': None
+            }
+            
+            # Get user count
+            try:
+                stats['users'] = get_total_count('user')
+            except Exception as e:
+                app.logger.error(f"Error getting user count: {str(e)}")
+                stats['users_error'] = str(e)
+            
+            # Get conversation count
+            try:
+                stats['conversations'] = get_total_count('conversation')
+            except Exception as e:
+                app.logger.error(f"Error getting conversation count: {str(e)}")
+                stats['conversations_error'] = str(e)
+            
+            # Get message count (only user messages)
+            try:
+                stats['messages'] = get_total_count('message', filter_user_messages=True)
+            except Exception as e:
+                app.logger.error(f"Error getting message count: {str(e)}")
+                stats['messages_error'] = str(e)
         
         app.logger.info(f"Stats API response: {stats}")
         return jsonify(stats)
@@ -433,7 +466,7 @@ def api_stats():
         }), 500
 
 @app.route('/api/metrics')
-def api_metrics():
+def api_metrics_with_db():
     """
     API endpoint to compute and return usage metrics
     Returns comprehensive metrics including counts, averages, and distributions
@@ -644,6 +677,24 @@ def api_metrics():
             'error': str(e),
             'summary': {'data_quality': 'error'}
         }), 500
+
+@app.route('/api/chart/sessions-by-date-db')
+def api_chart_sessions_by_date_db():
+    """Database version of sessions by date chart"""
+    try:
+        from database_queries import get_date_chart_data
+        
+        # Get query parameters
+        days = request.args.get('days', default=30, type=int)
+        grouping = request.args.get('grouping', default='days', type=str)
+        
+        data = get_date_chart_data(days, grouping)
+        
+        app.logger.info(f"Generated date chart data: {len(data['labels'])} days, {data['total']} total sessions")
+        return jsonify(data)
+    except Exception as e:
+        app.logger.error(f"Error in /api/chart/sessions-by-date-db: {str(e)}")
+        return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
 
 @app.route('/api/chart/sessions-by-date')
 def api_chart_sessions_by_date():
@@ -1006,7 +1057,7 @@ def api_chart_sessions_by_activity():
         return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
 
 @app.route('/api/conversations')
-def api_conversations():
+def api_conversations_with_db():
     """
     API endpoint to fetch all conversations sorted by Created Date
     Returns list of conversation objects with key fields
@@ -1237,6 +1288,58 @@ def api_conversation_messages(conv_id):
             'message_count': 0,
             'messages': []
         })
+
+@app.route('/api/refresh', methods=['POST'])
+def refresh_data():
+    """Endpoint to trigger a data refresh from Bubble API and sync to database"""
+    try:
+        from sync_manager import BubbleSyncManager
+        from models import SyncStatus
+        
+        # Check if this is the first sync (no data in database)
+        sync_statuses = SyncStatus.query.all()
+        is_first_sync = len(sync_statuses) == 0 or all(s.last_sync_date is None for s in sync_statuses)
+        
+        # Create sync manager
+        sync_manager = BubbleSyncManager()
+        
+        # Perform full sync if first time, otherwise incremental
+        if is_first_sync:
+            app.logger.info("Performing initial full sync")
+            results = sync_manager.perform_full_sync()
+        else:
+            app.logger.info("Performing incremental sync")
+            results = sync_manager.perform_incremental_sync()
+        
+        # Clear the old cache since we're using database now
+        cache.clear()
+        
+        # Count total synced records
+        total_synced = sum(r.get('count', 0) for r in results.values() if r.get('success'))
+        
+        app.logger.info(f"Sync completed: {results}")
+        
+        # Return success response
+        return jsonify({
+            'success': True,
+            'message': f'Data sync completed. {"Initial sync" if is_first_sync else "Incremental sync"} - {total_synced} records processed',
+            'results': results,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        app.logger.error(f"Error during refresh: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sync-status')
+def get_sync_status():
+    """Get the current sync status for all data types"""
+    try:
+        from database_queries import get_sync_status_all
+        status = get_sync_status_all()
+        return jsonify(status)
+    except Exception as e:
+        app.logger.error(f"Error getting sync status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.errorhandler(404)
 def not_found_error(error):

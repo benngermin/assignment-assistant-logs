@@ -54,26 +54,43 @@ Preferred communication style: Simple, everyday language.
 The frontend uses a traditional server-side rendered architecture with Flask templates:
 - **Template Engine**: Jinja2 templates with Bootstrap 5 dark theme for responsive UI
 - **Styling Framework**: Bootstrap 5 with Replit dark theme integration and Font Awesome icons
-- **Client-side JavaScript**: Vanilla JavaScript for dashboard interactions and API error handling
+- **Client-side JavaScript**: Vanilla JavaScript for dashboard interactions with async/await for data sync
 - **CSS Organization**: Custom CSS variables and Bootstrap overrides for consistent theming
+- **Data Refresh**: Two-stage refresh process - first syncs Bubble API to database, then loads dashboard from database
 
 ### Backend Architecture
-The backend follows a simple Flask application pattern:
-- **Web Framework**: Flask with basic routing and template rendering
-- **API Integration**: RESTful API client for Bubble.io service integration
-- **Error Handling**: Comprehensive logging and exception handling for API failures
+The backend uses a database-driven architecture with Flask and PostgreSQL:
+- **Web Framework**: Flask with SQLAlchemy ORM for database operations
+- **Database**: PostgreSQL for local data storage and caching
+- **Data Sync**: BubbleSyncManager handles incremental and full syncs from Bubble API
+- **Query Layer**: Database query functions for efficient data retrieval
+- **Error Handling**: Comprehensive logging and exception handling for API and database operations
 - **Session Management**: Flask sessions with configurable secret key from environment variables
 
 ### Data Integration Pattern
-The system uses an external API-first approach:
-- **Data Source**: Bubble.io API as the primary data backend
-- **API Client**: Custom `fetch_bubble_data()` function with timeout and error handling
-- **Data Flow**: API responses are passed directly to templates for rendering
-- **Authentication**: Bearer token authentication for API access
+The system uses a database-centric approach with API sync:
+- **Primary Data Store**: Local PostgreSQL database for all dashboard data
+- **Sync Strategy**: On-demand sync from Bubble API triggered by "Refresh Data" button
+- **Incremental Updates**: After initial full sync, only fetches new/modified records
+- **Data Models**: SQLAlchemy models for Users, Courses, Assignments, Conversations, Messages, etc.
+- **Sync Tracking**: SyncStatus table tracks last sync time and status for each data type
+- **API Fallback**: Falls back to direct API calls if database is empty
+
+### Database Schema
+Key database tables:
+- **users**: User profiles with email, roles, and settings
+- **courses**: Course information with names and metadata
+- **assignments**: Assignment details linked to courses
+- **conversations**: User conversations with course/assignment associations
+- **messages**: Individual messages within conversations
+- **conversation_starters**: Activity types (Quiz, Review, etc.)
+- **sync_status**: Tracks sync state for each data type
 
 ### Configuration Management
 Environment-based configuration pattern:
 - **Environment Variables**: Used for sensitive data like session secrets and API credentials
+- **Database Connection**: DATABASE_URL for PostgreSQL connection
+- **API Authentication**: BUBBLE_API_KEY_LIVE for Bubble API access
 - **Production Security**: Secure environment-only configuration without fallback values
 - **Logging Configuration**: INFO-level logging optimized for production
 
