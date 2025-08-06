@@ -31,59 +31,24 @@ CACHE_TTL = 600  # Cache for 10 minutes for better performance
 
 def fetch_bubble_data(data_type, params=None):
     """
-    Fetch data from Bubble API
+    Fetch data from Bubble API - DISABLED BY USER REQUEST
     
     Args:
         data_type (str): The type of data to fetch from the API
         params (dict): Optional query parameters
         
     Returns:
-        dict: JSON response from API or error information
+        dict: Error message indicating connections are disabled
     """
-    # Always use live environment and API
-    url = f'https://assignmentassistants.theinstituteslab.org/api/1.1/obj/{data_type}'
-    
-    # Get API key from BUBBLE_API_KEY_LIVE
-    api_key = os.environ.get('BUBBLE_API_KEY_LIVE', '')
-    if not api_key:
-        app.logger.warning('BUBBLE_API_KEY_LIVE environment variable not set')
-        return {
-            'error': 'API key not configured',
-            'details': 'Please set the BUBBLE_API_KEY_LIVE environment variable'
-        }
-    
-    # Add API key to params instead of headers for Bubble API
-    if params is None:
-        params = {}
-    params['api_token'] = api_key
-    
-    try:
-        app.logger.debug(f"Making API request to: {url}")
-        response = requests.get(url, params=params, timeout=60)
-        
-        if response.status_code == 200:
-            json_data = response.json()
-            app.logger.debug(f"API response received: {json_data}")
-            return json_data.get('response', json_data)
-        else:
-            app.logger.error(f"API request failed with status {response.status_code}: {response.text}")
-            return {
-                'error': f'API request failed with status {response.status_code}',
-                'details': response.text
-            }
-            
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Request exception: {str(e)}")
-        return {
-            'error': 'Failed to connect to Bubble API',
-            'details': str(e)
-        }
-    except Exception as e:
-        app.logger.error(f"Unexpected error: {str(e)}")
-        return {
-            'error': 'Unexpected error occurred',
-            'details': str(e)
-        }
+    # ALL BUBBLE CONNECTIONS DISABLED BY USER REQUEST
+    app.logger.info(f"Bubble API connection blocked for {data_type} - connections disabled by user")
+    return {
+        'error': 'Bubble connections disabled',
+        'details': 'All connections to Bubble API have been stopped by user request',
+        'results': [],
+        'count': 0,
+        'remaining': 0
+    }
 
 def get_total_count(data_type, filter_user_messages=False):
     """
