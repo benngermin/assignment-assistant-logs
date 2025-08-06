@@ -185,10 +185,15 @@
                         <div class="chart-header">
                             <h3><i class="fas fa-chart-line me-2"></i>Sessions by Date</h3>
                             <div class="chart-controls">
-                                <select id="date-range-selector" class="form-select">
+                                <select id="date-range-selector" class="form-select me-2">
                                     <option value="7">Last 7 days</option>
                                     <option value="30" selected>Last 30 days</option>
                                     <option value="90">Last 90 days</option>
+                                </select>
+                                <select id="date-grouping-selector" class="form-select">
+                                    <option value="days" selected>Group by Days</option>
+                                    <option value="weeks">Group by Weeks</option>
+                                    <option value="months">Group by Months</option>
                                 </select>
                             </div>
                         </div>

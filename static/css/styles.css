@@ -338,6 +338,12 @@ body {
     color: #2d3748;
 }
 
+.chart-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
 .chart-controls select {
     background: #f7fafc;
     border: 1px solid #e2e8f0;

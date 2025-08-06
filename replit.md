@@ -9,10 +9,14 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
 - **Fixed Statistics Loading**: Resolved "Failed to load statistics" error by creating missing `/api/stats` endpoint
 - **Added Activity Counts**: Implemented feature-specific counting for Quiz Me, Review Terms, Key Takeaways, etc.
 - **Interactive Charts**: Added live Chart.js visualizations including:
-  - Sessions by Date (line chart with date range selection)
+  - Sessions by Date (line chart with date range selection and grouping by days/weeks/months)
   - Sessions by Course (bar chart) 
   - Sessions by Activity Type (bar chart)
 - **Chart API Endpoints**: Created dedicated endpoints for chart data with proper date filtering and aggregation
+- **Advanced Date Grouping**: Sessions by Date chart now supports three grouping modes:
+  - Days: Individual daily data points
+  - Weeks: Weekly aggregation (Monday-Sunday format)
+  - Months: Monthly aggregation with full month names
 
 ## User Preferences
 

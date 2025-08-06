@@ -302,10 +302,10 @@ function loadCharts() {
     loadActivityChart();
 }
 
-function loadDateChart(days = 30) {
-    console.log(`Loading date chart for ${days} days...`);
+function loadDateChart(days = 30, grouping = 'days') {
+    console.log(`Loading date chart for ${days} days, grouped by ${grouping}...`);
     
-    fetch(`/api/chart/sessions-by-date?days=${days}`)
+    fetch(`/api/chart/sessions-by-date?days=${days}&grouping=${grouping}`)
         .then(response => response.json())
         .then(data => {
             const ctx = document.getElementById('dateChart').getContext('2d');
@@ -315,13 +315,25 @@ function loadDateChart(days = 30) {
                 dateChart.destroy();
             }
             
+            // Format labels based on grouping
+            let formattedLabels = data.labels;
+            if (grouping === 'days') {
+                formattedLabels = data.labels.map(label => {
+                    const date = new Date(label);
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                });
+            } else if (grouping === 'weeks') {
+                // Labels are already formatted as "Jan 01 - Jan 07"
+                formattedLabels = data.labels;
+            } else if (grouping === 'months') {
+                // Labels are already formatted as "January 2025"
+                formattedLabels = data.labels;
+            }
+            
             dateChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.labels.map(label => {
-                        const date = new Date(label);
-                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    }),
+                    labels: formattedLabels,
                     datasets: [{
                         label: 'Sessions',
                         data: data.data,
@@ -362,6 +374,9 @@ function loadDateChart(days = 30) {
                         x: {
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                maxTicksLimit: grouping === 'days' ? 10 : undefined
                             }
                         }
                     }
@@ -505,11 +520,20 @@ function setupEventListeners() {
     
     // Date range selector change event
     const dateRangeSelector = document.getElementById('date-range-selector');
+    const dateGroupingSelector = document.getElementById('date-grouping-selector');
+    
+    function reloadDateChart() {
+        const days = parseInt(dateRangeSelector?.value || 30);
+        const grouping = dateGroupingSelector?.value || 'days';
+        loadDateChart(days, grouping);
+    }
+    
     if (dateRangeSelector) {
-        dateRangeSelector.addEventListener('change', function() {
-            const days = parseInt(this.value);
-            loadDateChart(days);
-        });
+        dateRangeSelector.addEventListener('change', reloadDateChart);
+    }
+    
+    if (dateGroupingSelector) {
+        dateGroupingSelector.addEventListener('change', reloadDateChart);
     }
 }
 

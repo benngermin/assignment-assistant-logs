@@ -413,10 +413,12 @@ def api_chart_sessions_by_date():
     """
     API endpoint to get sessions grouped by date for line chart
     Supports date range filtering: 7, 30, or 90 days
+    Supports grouping by: days, weeks, months
     """
     try:
-        # Get date range parameter (default to 30 days)
+        # Get parameters
         days = int(request.args.get('days', 30))
+        grouping = request.args.get('grouping', 'days')  # days, weeks, months
         
         # Fetch all conversations
         all_conversations = fetch_all('conversation')
@@ -425,13 +427,13 @@ def api_chart_sessions_by_date():
         
         from datetime import datetime, timedelta
         from collections import defaultdict
-        import json
+        import calendar
         
         # Calculate start date
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
         
-        # Group conversations by date
+        # Group conversations by date with specified grouping
         date_counts = defaultdict(int)
         
         for conv in all_conversations:
@@ -444,28 +446,64 @@ def api_chart_sessions_by_date():
                     
                     # Only include dates within range
                     if start_date <= created_date <= end_date:
-                        date_key = created_date.strftime('%Y-%m-%d')
+                        if grouping == 'days':
+                            date_key = created_date.strftime('%Y-%m-%d')
+                        elif grouping == 'weeks':
+                            # Get Monday of the week (ISO week)
+                            week_start = created_date - timedelta(days=created_date.weekday())
+                            date_key = week_start.strftime('%Y-%m-%d')
+                        elif grouping == 'months':
+                            date_key = created_date.strftime('%Y-%m')
+                        else:
+                            date_key = created_date.strftime('%Y-%m-%d')  # fallback to days
+                        
                         date_counts[date_key] += 1
                 except (ValueError, TypeError) as e:
                     app.logger.debug(f"Failed to parse date {created_date_str}: {e}")
                     continue
         
-        # Generate complete date range (fill missing dates with 0)
+        # Generate complete date range with appropriate intervals
         labels = []
         data = []
-        current_date = start_date
         
-        while current_date <= end_date:
-            date_key = current_date.strftime('%Y-%m-%d')
-            labels.append(date_key)
-            data.append(date_counts.get(date_key, 0))
-            current_date += timedelta(days=1)
+        if grouping == 'days':
+            current_date = start_date
+            while current_date <= end_date:
+                date_key = current_date.strftime('%Y-%m-%d')
+                labels.append(date_key)
+                data.append(date_counts.get(date_key, 0))
+                current_date += timedelta(days=1)
+                
+        elif grouping == 'weeks':
+            # Start from Monday of start_date week
+            current_date = start_date - timedelta(days=start_date.weekday())
+            while current_date <= end_date:
+                date_key = current_date.strftime('%Y-%m-%d')
+                week_end = current_date + timedelta(days=6)
+                if current_date >= start_date:  # Only include weeks that overlap with our range
+                    labels.append(f"{current_date.strftime('%b %d')} - {week_end.strftime('%b %d')}")
+                    data.append(date_counts.get(date_key, 0))
+                current_date += timedelta(weeks=1)
+                
+        elif grouping == 'months':
+            current_date = start_date.replace(day=1)  # Start from first day of month
+            while current_date <= end_date:
+                date_key = current_date.strftime('%Y-%m')
+                labels.append(current_date.strftime('%B %Y'))
+                data.append(date_counts.get(date_key, 0))
+                
+                # Move to next month
+                if current_date.month == 12:
+                    current_date = current_date.replace(year=current_date.year + 1, month=1)
+                else:
+                    current_date = current_date.replace(month=current_date.month + 1)
         
-        app.logger.info(f"Generated date chart data: {len(labels)} days, {sum(data)} total sessions")
+        app.logger.info(f"Generated date chart data: {len(labels)} {grouping}, {sum(data)} total sessions")
         return jsonify({
             'labels': labels,
             'data': data,
-            'total_sessions': sum(data)
+            'total_sessions': sum(data),
+            'grouping': grouping
         })
         
     except Exception as e:
