@@ -3,7 +3,7 @@ import logging
 import json
 import requests
 from collections import Counter
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -199,6 +199,58 @@ def api_total_messages():
     except Exception as e:
         app.logger.error(f"Error in /api/total_messages: {str(e)}")
         return jsonify({'total_messages': 0, 'error': str(e)}), 500
+
+@app.route('/api/stats')
+def api_stats():
+    """
+    API endpoint to get basic statistics for the dashboard
+    Returns: JSON with users, conversations, messages counts and any API errors
+    """
+    try:
+        # Initialize response with default values
+        stats = {
+            'users': 0,
+            'conversations': 0,
+            'messages': 0,
+            'users_error': None,
+            'conversations_error': None,
+            'messages_error': None
+        }
+        
+        # Get user count
+        try:
+            stats['users'] = get_total_count('user')
+        except Exception as e:
+            app.logger.error(f"Error getting user count: {str(e)}")
+            stats['users_error'] = str(e)
+        
+        # Get conversation count
+        try:
+            stats['conversations'] = get_total_count('conversation')
+        except Exception as e:
+            app.logger.error(f"Error getting conversation count: {str(e)}")
+            stats['conversations_error'] = str(e)
+        
+        # Get message count
+        try:
+            stats['messages'] = get_total_count('message')
+        except Exception as e:
+            app.logger.error(f"Error getting message count: {str(e)}")
+            stats['messages_error'] = str(e)
+        
+        app.logger.info(f"Stats API response: {stats}")
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/stats: {str(e)}")
+        return jsonify({
+            'users': 0,
+            'conversations': 0,
+            'messages': 0,
+            'users_error': str(e),
+            'conversations_error': str(e),
+            'messages_error': str(e)
+        }), 500
 
 @app.route('/api/metrics')
 def api_metrics():
