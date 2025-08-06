@@ -1,12 +1,16 @@
 // Assignment Assistant Dashboard - Main JavaScript
 
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Assignment Assistant Dashboard loaded');
-    initializeDashboard();
-});
+// Global flag to track initialization
+let dashboardInitialized = false;
 
 function initializeDashboard() {
+    // Prevent double initialization
+    if (dashboardInitialized) {
+        console.log('Dashboard already initialized, skipping...');
+        return;
+    }
+    dashboardInitialized = true;
+    
     console.log('Dashboard initialized');
     
     // Initialize environment toggle
@@ -21,6 +25,12 @@ function initializeDashboard() {
     // Load comprehensive metrics
     loadComprehensiveMetrics();
     
+    // Load charts
+    loadCharts();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
     // Set up refresh button
     const refreshBtn = document.querySelector('.btn-activity');
     if (refreshBtn) {
@@ -28,6 +38,7 @@ function initializeDashboard() {
             loadStatistics();
             loadConversations();
             loadComprehensiveMetrics();
+            loadCharts();
             showAlert('success', 'Data refreshed successfully!');
         });
     }
@@ -620,17 +631,7 @@ function setupEventListeners() {
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Assignment Assistant Dashboard loaded');
-    
-    // Load initial data
-    loadStatistics();
-    loadConversations();
-    loadComprehensiveMetrics();
-    loadCharts();
-    
-    // Set up event listeners
-    setupEventListeners();
-    
-    console.log('Dashboard initialized');
+    initializeDashboard();
 });
 
 // Export functions for global use

@@ -6,6 +6,14 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
 
 ## Recent Changes (August 2025)
 
+### Bug Fixes (January 6, 2025)
+- **Fixed Duplicate Initialization**: Resolved JavaScript error caused by duplicate DOMContentLoaded event listeners that was causing console errors
+- **Security Fix**: Moved hardcoded API key to environment variable BUBBLE_API_KEY for better security
+- **Prevented Double Initialization**: Added flag to prevent dashboard from initializing twice
+- **Fixed Chart Loading**: Charts now properly load on initial page load and refresh
+- **API Key Issue**: Identified that the current API key appears to be invalid/expired (returning 401 errors)
+
+### Previous Changes
 - **Fixed Statistics Loading**: Resolved "Failed to load statistics" error by creating missing `/api/stats` endpoint
 - **Added Activity Counts**: Implemented feature-specific counting for Quiz Me, Review Terms, Key Takeaways, etc.
 - **Interactive Charts**: Added live Chart.js visualizations including:

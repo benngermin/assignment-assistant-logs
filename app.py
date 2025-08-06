@@ -32,8 +32,17 @@ def fetch_bubble_data(data_type, params=None):
     else:  # dev
         url = f'https://assignmentassistants.theinstituteslab.org/version-test/api/1.1/obj/{data_type}'
     
+    # Get API key from environment variable
+    api_key = os.environ.get('BUBBLE_API_KEY', '')
+    if not api_key:
+        app.logger.warning('BUBBLE_API_KEY environment variable not set')
+        return {
+            'error': 'API key not configured',
+            'details': 'Please set the BUBBLE_API_KEY environment variable'
+        }
+    
     headers = {
-        'Authorization': 'Bearer 7c62edca8f27655cd29e3f0f6a971748',
+        'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
     }
     
