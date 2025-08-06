@@ -31,24 +31,74 @@ CACHE_TTL = 600  # Cache for 10 minutes for better performance
 
 def fetch_bubble_data(data_type, params=None):
     """
-    Fetch data from Bubble API - DISABLED BY USER REQUEST
+    Fetch data from Bubble API
     
     Args:
         data_type (str): The type of data to fetch from the API
         params (dict): Optional query parameters
         
     Returns:
-        dict: Error message indicating connections are disabled
+        dict: API response data or error information
     """
-    # ALL BUBBLE CONNECTIONS DISABLED BY USER REQUEST
-    app.logger.info(f"Bubble API connection blocked for {data_type} - connections disabled by user")
-    return {
-        'error': 'Bubble connections disabled',
-        'details': 'All connections to Bubble API have been stopped by user request',
-        'results': [],
-        'count': 0,
-        'remaining': 0
+    # Get API key from environment
+    api_key = os.environ.get("BUBBLE_API_KEY_LIVE")
+    if not api_key:
+        app.logger.error("No BUBBLE_API_KEY_LIVE found in environment")
+        return {
+            'error': 'Missing API key',
+            'details': 'BUBBLE_API_KEY_LIVE not configured',
+            'results': [],
+            'count': 0,
+            'remaining': 0
+        }
+    
+    # Build API URL
+    base_url = "https://assignmentassistants.theinstituteslab.org/api/1.1/obj"
+    url = f"{base_url}/{data_type}"
+    
+    # Set up headers
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
     }
+    
+    try:
+        # Make API request
+        app.logger.debug(f"Fetching {data_type} from Bubble API: {url}")
+        response = requests.get(url, headers=headers, params=params, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            app.logger.debug(f"Successfully fetched {data_type}: {data.get('count', 0)} items")
+            return data
+        else:
+            app.logger.error(f"Bubble API error for {data_type}: {response.status_code} - {response.text}")
+            return {
+                'error': f'API request failed',
+                'details': f'Status: {response.status_code}, Response: {response.text}',
+                'results': [],
+                'count': 0,
+                'remaining': 0
+            }
+            
+    except requests.exceptions.Timeout:
+        app.logger.error(f"Timeout fetching {data_type} from Bubble API")
+        return {
+            'error': 'Request timeout',
+            'details': 'API request timed out after 30 seconds',
+            'results': [],
+            'count': 0,
+            'remaining': 0
+        }
+    except Exception as e:
+        app.logger.error(f"Exception fetching {data_type} from Bubble API: {str(e)}")
+        return {
+            'error': 'Request failed',
+            'details': str(e),
+            'results': [],
+            'count': 0,
+            'remaining': 0
+        }
 
 def get_total_count(data_type, filter_user_messages=False):
     """

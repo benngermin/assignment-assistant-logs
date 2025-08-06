@@ -7,8 +7,10 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
 ## Recent Changes (August 2025)
 
 ### Production-Ready Configuration (August 6, 2025)
+- **Restored Bubble API Connections**: Fixed hardcoded API blocking - now properly connects to live Bubble API using BUBBLE_API_KEY_LIVE
 - **Removed All Development References**: Completely removed "Dev version" UI toggles and development-specific code
 - **Production-Only Mode**: Simplified to single production environment without dev/live switching
+- **Enhanced Refresh Button**: Added loading spinner, progress tracking, and better user feedback during data refresh
 - **Security Hardening**: Removed development fallback secrets and debug mode
 - **UI Cleanup**: Removed environment toggle buttons, now shows "Live Data" status only
 - **Logging Optimization**: Changed from DEBUG to INFO level logging for production
