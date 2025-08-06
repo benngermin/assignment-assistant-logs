@@ -13,8 +13,8 @@ function initializeDashboard() {
     
     console.log('Dashboard initialized');
     
-    // Initialize environment toggle
-    initializeEnvironmentToggle();
+    // Initialize live environment status
+    initializeLiveStatus();
     
     // Load initial statistics
     loadStatistics();
@@ -46,18 +46,12 @@ function initializeDashboard() {
     console.log('Event listeners set up');
 }
 
-// Initialize environment toggle functionality (removed - now using live only)
-function initializeEnvironmentToggle() {
+// Initialize live environment status
+function initializeLiveStatus() {
     // Set status to always show Live
     const statusElement = document.getElementById('env-status');
     if (statusElement) {
         statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live Data';
-    }
-    
-    // Hide environment toggle if it exists
-    const envToggle = document.querySelector('.env-toggle');
-    if (envToggle) {
-        envToggle.style.display = 'none';
     }
 }
 

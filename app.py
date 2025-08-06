@@ -7,25 +7,25 @@ from flask import Flask, render_template, jsonify, request, session
 from datetime import datetime, timedelta
 import time
 
-# Set up logging for debugging
-logging.basicConfig(level=logging.DEBUG)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Create Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET")
 
 # Simple in-memory cache with all data types
 cache = {
-    'conversations': {'data': None, 'timestamp': 0, 'env': None},
-    'users': {'data': None, 'timestamp': 0, 'env': None},
-    'courses': {'data': None, 'timestamp': 0, 'env': None},
-    'assignments': {'data': None, 'timestamp': 0, 'env': None},
-    'conversation_starters': {'data': None, 'timestamp': 0, 'env': None},
-    'conversation': {'data': None, 'timestamp': 0, 'env': None},
-    'user': {'data': None, 'timestamp': 0, 'env': None},
-    'course': {'data': None, 'timestamp': 0, 'env': None},
-    'conversation_starter': {'data': None, 'timestamp': 0, 'env': None},
-    'message': {'data': None, 'timestamp': 0, 'env': None}
+    'conversations': {'data': None, 'timestamp': 0},
+    'users': {'data': None, 'timestamp': 0},
+    'courses': {'data': None, 'timestamp': 0},
+    'assignments': {'data': None, 'timestamp': 0},
+    'conversation_starters': {'data': None, 'timestamp': 0},
+    'conversation': {'data': None, 'timestamp': 0},
+    'user': {'data': None, 'timestamp': 0},
+    'course': {'data': None, 'timestamp': 0},
+    'conversation_starter': {'data': None, 'timestamp': 0},
+    'message': {'data': None, 'timestamp': 0}
 }
 CACHE_TTL = 600  # Cache for 10 minutes for better performance
 
@@ -243,8 +243,7 @@ def fetch_all_cached(data_type, custom_params=None):
     if data_type in cache:
         cache[data_type] = {
             'data': data,
-            'timestamp': current_time,
-            'env': 'live'  # Always live now
+            'timestamp': current_time
         }
         app.logger.info(f"Cached {len(data)} items for {data_type} (fetch took {fetch_time:.2f}s)")
     
