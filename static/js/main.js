@@ -1,558 +1,196 @@
-// Assignment Assistant Dashboard - Main JavaScript
+// Assignment Assistant Dashboard - Compact Version
+let mainChart;
 
-// Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Assignment Assistant Dashboard loaded');
+    
+    // Initialize dashboard
     initializeDashboard();
-});
-
-function initializeDashboard() {
-    console.log('Dashboard initialized');
-    
-    // Load initial statistics
-    loadStatistics();
-    
-    // Load conversations
-    loadConversations();
-    
-    // Load comprehensive metrics
-    loadComprehensiveMetrics();
-    
-    // Set up refresh button
-    const refreshBtn = document.querySelector('.btn-activity');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', function() {
-            loadStatistics();
-            loadConversations();
-            loadComprehensiveMetrics();
-            showAlert('success', 'Data refreshed successfully!');
-        });
-    }
-    
-    console.log('Event listeners set up');
-}
-
-// Load basic statistics
-function loadStatistics() {
-    console.log('Loading statistics...');
-    
-    fetch('/api/stats')
-        .then(response => response.json())
-        .then(data => {
-            // Update statistics in the UI
-            updateStatElement('total-users', data.users || 0);
-            updateStatElement('total-conversations', data.conversations || 0);
-            updateStatElement('total-messages', data.messages || 0);
-            
-            // Calculate average
-            const avgMessages = data.conversations > 0 
-                ? (data.messages / data.conversations).toFixed(1) 
-                : 0;
-            updateStatElement('avg-messages', avgMessages);
-            
-            // Show error messages if any
-            if (data.users_error) {
-                console.error('Users API error:', data.users_error);
-                showAlert('warning', 'Unable to load user data. API may be down.');
-            }
-            
-            if (data.conversations_error) {
-                console.error('Conversations API error:', data.conversations_error);
-                showAlert('warning', 'Unable to load conversation data. API may be down.');
-            }
-            
-            if (data.messages_error) {
-                console.error('Messages API error:', data.messages_error);
-                showAlert('warning', 'Unable to load message data. API may be down.');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading statistics:', error);
-            showAlert('danger', 'Failed to load statistics. Please try again.');
-            
-            // Show zeros on error
-            updateStatElement('total-users', 0);
-            updateStatElement('total-conversations', 0);
-            updateStatElement('total-messages', 0);
-            updateStatElement('avg-messages', 0);
-        });
-}
-
-// Load comprehensive metrics
-function loadComprehensiveMetrics() {
-    console.log('Loading comprehensive metrics...');
-    
-    fetch('/api/metrics')
-        .then(response => response.json())
-        .then(data => {
-            // Update feature counts
-            updateStatElement('quiz-count', data.quiz_count || 0);
-            updateStatElement('review-count', data.review_count || 0);
-            updateStatElement('takeaway-count', data.takeaway_count || 0);
-            updateStatElement('simplify-count', data.simplify_count || 0);
-            updateStatElement('study-count', data.study_count || 0);
-            updateStatElement('motivate-count', data.motivate_count || 0);
-            
-            // Handle errors
-            if (data.error) {
-                console.error('Metrics API error:', data.error);
-                showAlert('warning', 'Unable to load complete metrics. Check API key.');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading metrics:', error);
-            
-            // Set all counts to 0 on error
-            updateStatElement('quiz-count', 0);
-            updateStatElement('review-count', 0);
-            updateStatElement('takeaway-count', 0);
-            updateStatElement('simplify-count', 0);
-            updateStatElement('study-count', 0);
-            updateStatElement('motivate-count', 0);
-        });
-}
-
-// Load conversations with optional filters
-function loadConversations() {
-    console.log('Loading conversations...');
-    
-    const userId = document.getElementById('user-filter')?.value || '';
-    const courseId = document.getElementById('course-filter')?.value || '';
-    
-    let url = '/api/conversations';
-    const params = new URLSearchParams();
-    if (userId) params.append('user_id', userId);
-    if (courseId) params.append('course_id', courseId);
-    if (params.toString()) url += '?' + params.toString();
-    
-    const conversationsList = document.getElementById('conversations-list');
-    conversationsList.innerHTML = `
-        <div class="loading-message">
-            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-            Loading conversations...
-        </div>
-    `;
-    
-    fetch(url)
-        .then(response => response.json())
-        .then(conversations => {
-            if (conversations.length === 0) {
-                conversationsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>No conversations found</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            conversations.forEach(conv => {
-                const date = new Date(conv['Created Date']).toLocaleDateString();
-                html += `
-                    <div class="conversation-item" onclick="showMessages('${conv._id}')">
-                        <div class="conversation-header">
-                            <span class="conversation-id">ID: ${conv._id.substring(0, 12)}...</span>
-                            <span class="conversation-date">${date}</span>
-                        </div>
-                        <div class="conversation-details">
-                            <span><i class="fas fa-user"></i> ${conv.user || 'Unknown'}</span>
-                            <span><i class="fas fa-book"></i> ${conv.course || 'N/A'}</span>
-                            <span><i class="fas fa-comments"></i> ${conv.message_count || 0} messages</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            conversationsList.innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Error loading conversations:', error);
-            conversationsList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Failed to load conversations</p>
-                </div>
-            `;
-            showAlert('danger', 'Failed to load conversations. Please check your connection.');
-        });
-}
-
-// Show messages for a specific conversation
-function showMessages(conversationId) {
-    console.log('Loading messages for conversation:', conversationId);
-    
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('messagesModal'));
-    modal.show();
-    
-    // Set loading state
-    const messagesContainer = document.getElementById('messages-container');
-    messagesContainer.innerHTML = `
-        <div class="loading-message">
-            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-            Loading messages...
-        </div>
-    `;
-    
-    // Fetch messages
-    fetch(`/api/conversation/${conversationId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (!data.messages || data.messages.length === 0) {
-                messagesContainer.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-comment-slash"></i>
-                        <p>No messages found in this conversation</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '<div class="messages-list">';
-            data.messages.forEach(msg => {
-                const role = msg.role || 'user';
-                const messageClass = role === 'assistant' ? 'assistant' : 'user';
-                const date = msg['Created Date'] ? new Date(msg['Created Date']).toLocaleString() : '';
-                
-                html += `
-                    <div class="message-item ${messageClass}">
-                        <div class="message-header">
-                            <span class="message-role">${role}</span>
-                            <span class="message-date">${date}</span>
-                        </div>
-                        <div class="message-text">${msg.text || 'No content'}</div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            
-            messagesContainer.innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Error loading messages:', error);
-            messagesContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Failed to load messages</p>
-                </div>
-            `;
-            showAlert('danger', 'Failed to load messages. Please try again.');
-        });
-}
-
-// Update stat element with animation
-function updateStatElement(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        // Remove spinner and add value with animation
-        element.innerHTML = value;
-        element.style.opacity = '0';
-        setTimeout(() => {
-            element.style.transition = 'opacity 0.5s ease';
-            element.style.opacity = '1';
-        }, 100);
-    }
-}
-
-// Show alert message
-function showAlert(type, message) {
-    const alertContainer = document.getElementById('alert-container');
-    const alertId = 'alert-' + Date.now();
-    
-    const alertHtml = `
-        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    alertContainer.insertAdjacentHTML('beforeend', alertHtml);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        const alertElement = document.getElementById(alertId);
-        if (alertElement) {
-            const bsAlert = new bootstrap.Alert(alertElement);
-            bsAlert.close();
-        }
-    }, 5000);
-}
-
-// Chart instances
-let dateChart = null;
-let courseChart = null;
-let activityChart = null;
-
-// Chart colors
-const chartColors = {
-    primary: '#667eea',
-    secondary: '#764ba2',
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444',
-    info: '#3b82f6'
-};
-
-// Load chart data and create charts
-function loadCharts() {
-    console.log('Loading charts...');
-    loadDateChart();
-    loadCourseChart();
-    loadActivityChart();
-}
-
-function loadDateChart(days = 30, grouping = 'days') {
-    console.log(`Loading date chart for ${days} days, grouped by ${grouping}...`);
-    
-    fetch(`/api/chart/sessions-by-date?days=${days}&grouping=${grouping}`)
-        .then(response => response.json())
-        .then(data => {
-            const ctx = document.getElementById('dateChart').getContext('2d');
-            
-            // Destroy existing chart if exists
-            if (dateChart) {
-                dateChart.destroy();
-            }
-            
-            // Format labels based on grouping
-            let formattedLabels = data.labels;
-            if (grouping === 'days') {
-                formattedLabels = data.labels.map(label => {
-                    const date = new Date(label);
-                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                });
-            } else if (grouping === 'weeks') {
-                // Labels are already formatted as "Jan 01 - Jan 07"
-                formattedLabels = data.labels;
-            } else if (grouping === 'months') {
-                // Labels are already formatted as "January 2025"
-                formattedLabels = data.labels;
-            }
-            
-            dateChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: formattedLabels,
-                    datasets: [{
-                        label: 'Sessions',
-                        data: data.data,
-                        borderColor: chartColors.info,
-                        backgroundColor: chartColors.info + '20',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: chartColors.info,
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 6,
-                        pointHoverRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
-                            borderColor: chartColors.info,
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                maxTicksLimit: grouping === 'days' ? 10 : undefined
-                            }
-                        }
-                    }
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error loading date chart:', error);
-        });
-}
-
-function loadCourseChart() {
-    console.log('Loading course chart...');
-    
-    fetch('/api/chart/sessions-by-course')
-        .then(response => response.json())
-        .then(data => {
-            const ctx = document.getElementById('courseChart').getContext('2d');
-            
-            // Destroy existing chart if exists
-            if (courseChart) {
-                courseChart.destroy();
-            }
-            
-            courseChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: 'Sessions',
-                        data: data.data,
-                        backgroundColor: chartColors.warning,
-                        borderColor: chartColors.warning,
-                        borderWidth: 1,
-                        borderRadius: 6,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
-                            borderColor: chartColors.warning,
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error loading course chart:', error);
-        });
-}
-
-function loadActivityChart() {
-    console.log('Loading activity chart...');
-    
-    fetch('/api/chart/sessions-by-activity')
-        .then(response => response.json())
-        .then(data => {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-            
-            // Destroy existing chart if exists
-            if (activityChart) {
-                activityChart.destroy();
-            }
-            
-            activityChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: 'Sessions',
-                        data: data.data,
-                        backgroundColor: chartColors.success,
-                        borderColor: chartColors.success,
-                        borderWidth: 1,
-                        borderRadius: 6,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
-                            borderColor: chartColors.success,
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error loading activity chart:', error);
-        });
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    console.log('Event listeners set up');
-    
-    // Date range selector change event
-    const dateRangeSelector = document.getElementById('date-range-selector');
-    const dateGroupingSelector = document.getElementById('date-grouping-selector');
-    
-    function reloadDateChart() {
-        const days = parseInt(dateRangeSelector?.value || 30);
-        const grouping = dateGroupingSelector?.value || 'days';
-        loadDateChart(days, grouping);
-    }
-    
-    if (dateRangeSelector) {
-        dateRangeSelector.addEventListener('change', reloadDateChart);
-    }
-    
-    if (dateGroupingSelector) {
-        dateGroupingSelector.addEventListener('change', reloadDateChart);
-    }
-}
-
-// Initialize dashboard when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Assignment Assistant Dashboard loaded');
-    
-    // Load initial data
-    loadStatistics();
-    loadConversations();
-    loadComprehensiveMetrics();
-    loadCharts();
     
     // Set up event listeners
     setupEventListeners();
     
-    console.log('Dashboard initialized');
+    // Load data
+    loadAllData();
 });
 
-// Export functions for global use
-window.loadConversations = loadConversations;
-window.showMessages = showMessages;
+function initializeDashboard() {
+    console.log('Dashboard initialized');
+}
+
+function setupEventListeners() {
+    // Date range and grouping controls
+    const dateRange = document.getElementById('date-range');
+    const grouping = document.getElementById('grouping');
+    
+    if (dateRange) {
+        dateRange.addEventListener('change', function() {
+            loadMainChart();
+        });
+    }
+    
+    if (grouping) {
+        grouping.addEventListener('change', function() {
+            loadMainChart();
+        });
+    }
+    
+    console.log('Event listeners set up');
+}
+
+function loadAllData() {
+    console.log('Loading all data...');
+    loadMetrics();
+    loadMainChart();
+    loadCourseStats();
+}
+
+async function loadMetrics() {
+    try {
+        console.log('Loading metrics...');
+        const response = await fetch('/api/metrics');
+        const data = await response.json();
+        
+        // Update quick stats
+        document.getElementById('total-conversations').textContent = data.total_conversations || 0;
+        document.getElementById('total-users').textContent = data.total_users || 0;
+        document.getElementById('quiz-count').textContent = data.quiz_count || 0;
+        
+        // Update activity counts
+        document.getElementById('quiz-display').textContent = data.quiz_count || 0;
+        document.getElementById('review-count').textContent = data.review_count || 0;
+        document.getElementById('takeaway-count').textContent = data.takeaway_count || 0;
+        document.getElementById('simplify-count').textContent = data.simplify_count || 0;
+        
+        console.log('Metrics loaded successfully');
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+        // Set fallback values
+        ['total-conversations', 'total-users', 'quiz-count', 'quiz-display', 'review-count', 'takeaway-count', 'simplify-count'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = '0';
+        });
+    }
+}
+
+async function loadMainChart() {
+    try {
+        const dateRange = document.getElementById('date-range').value || 30;
+        const grouping = document.getElementById('grouping').value || 'days';
+        
+        console.log(`Loading main chart for ${dateRange} days, grouped by ${grouping}...`);
+        
+        const response = await fetch(`/api/chart/sessions-by-date?days=${dateRange}&grouping=${grouping}`);
+        const data = await response.json();
+        
+        // Destroy existing chart
+        if (mainChart) {
+            mainChart.destroy();
+        }
+        
+        // Create new chart
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'Sessions',
+                    data: data.data || [],
+                    borderColor: '#2E8B57',
+                    backgroundColor: 'rgba(46, 139, 87, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f1f3f4'
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6c757d'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6c757d',
+                            maxTicksLimit: 8
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverBackgroundColor: '#2E8B57'
+                    }
+                }
+            }
+        });
+        
+        console.log('Main chart loaded successfully');
+    } catch (error) {
+        console.error('Error loading main chart:', error);
+    }
+}
+
+async function loadCourseStats() {
+    try {
+        console.log('Loading course stats...');
+        const response = await fetch('/api/chart/sessions-by-course');
+        const data = await response.json();
+        
+        const courseList = document.getElementById('course-list');
+        
+        if (data.labels && data.labels.length > 0) {
+            courseList.innerHTML = '';
+            
+            data.labels.forEach((course, index) => {
+                const count = data.data[index];
+                const courseItem = document.createElement('div');
+                courseItem.className = 'course-item';
+                courseItem.innerHTML = `
+                    <span class="course-name">${course}</span>
+                    <span class="course-count">${count}</span>
+                `;
+                courseList.appendChild(courseItem);
+            });
+        } else {
+            courseList.innerHTML = '<div class="loading">No course data available</div>';
+        }
+        
+        console.log('Course stats loaded successfully');
+    } catch (error) {
+        console.error('Error loading course stats:', error);
+        document.getElementById('course-list').innerHTML = '<div class="loading">Error loading courses</div>';
+    }
+}
+
+// Utility function to format numbers
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
+}
