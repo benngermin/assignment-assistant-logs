@@ -21,6 +21,11 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
   - Charts display courses as "Claims in an Evolving World" vs "Course 17297132"
   - Conversation lists show proper course names
   - Metrics API returns readable course names
+- **Assignment Name Display**: Comprehensive assignment labeling system implemented:
+  - Assignment chart endpoint created for future use
+  - Conversation lists prepared to show assignment names vs IDs
+  - Metrics API updated to use assignment names
+  - Priority naming: assignment_name_text > name_text > assignment_name > name > title
 
 ## User Preferences
 

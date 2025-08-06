@@ -356,6 +356,23 @@ def api_metrics():
                     if course_id:
                         course_name_map[course_id] = course_name
             
+            # Fetch assignment data for proper naming in metrics
+            all_assignments = fetch_all('assignment')
+            assignment_name_map = {}
+            
+            if all_assignments:
+                for assignment in all_assignments:
+                    assignment_id = assignment.get('_id')
+                    # Priority order: assignment_name_text > name_text > assignment_name > name > title > fallback
+                    assignment_name = (assignment.get('assignment_name_text') or 
+                                     assignment.get('name_text') or 
+                                     assignment.get('assignment_name') or 
+                                     assignment.get('name') or 
+                                     assignment.get('title') or 
+                                     f'Assignment {assignment_id[:8]}' if assignment_id else 'Unknown Assignment')
+                    if assignment_id:
+                        assignment_name_map[assignment_id] = assignment_name
+            
             for conv in all_conversations:
                 # Count by course field (using course_custom_variable_parent as primary field)
                 course_id = conv.get('course_custom_variable_parent', 
@@ -366,10 +383,14 @@ def api_metrics():
                     course_name = course_name_map.get(course_id, f'Course {course_id[:8]}')
                     course_counter[course_name] += 1
                 
-                # Count by assignment field
-                assignment_id = conv.get('assignment', conv.get('assignment_id', conv.get('Assignment')))
+                # Count by assignment field (using assignment_custom_variable_parent as primary field)
+                assignment_id = conv.get('assignment_custom_variable_parent',
+                                       conv.get('assignment', 
+                                              conv.get('assignment_id', 
+                                                     conv.get('Assignment'))))
                 if assignment_id:
-                    assignment_counter[str(assignment_id)] += 1
+                    assignment_name = assignment_name_map.get(assignment_id, f'Assignment {assignment_id[:8]}')
+                    assignment_counter[assignment_name] += 1
                 
                 # Count by activity type based on conversation starter
                 starter_id = conv.get('conversation_starter_custom_conversation_starter', 
@@ -588,6 +609,66 @@ def api_chart_sessions_by_course():
         app.logger.error(f"Error in /api/chart/sessions-by-course: {str(e)}")
         return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
 
+@app.route('/api/chart/sessions-by-assignment')
+def api_chart_sessions_by_assignment():
+    """
+    API endpoint for Sessions by Assignment chart data.
+    Returns assignment names and session counts.
+    """
+    try:
+        # Get all conversations
+        all_conversations = fetch_all('conversation')
+        if not all_conversations:
+            return jsonify({'labels': [], 'data': [], 'total_sessions': 0})
+        
+        # Fetch assignment data for proper naming
+        all_assignments = fetch_all('assignment')
+        assignment_name_map = {}
+        
+        if all_assignments:
+            for assignment in all_assignments:
+                assignment_id = assignment.get('_id')
+                # Priority order: assignment_name_text > name_text > assignment_name > name > title > fallback
+                assignment_name = (assignment.get('assignment_name_text') or 
+                                 assignment.get('name_text') or 
+                                 assignment.get('assignment_name') or 
+                                 assignment.get('name') or 
+                                 assignment.get('title') or 
+                                 f'Assignment {assignment_id[:8]}' if assignment_id else 'Unknown Assignment')
+                if assignment_id:
+                    assignment_name_map[assignment_id] = assignment_name
+        
+        # Count conversations by assignment
+        assignment_counter = Counter()
+        
+        for conv in all_conversations:
+            # Get assignment ID (using assignment_custom_variable_parent as primary field)
+            assignment_id = conv.get('assignment_custom_variable_parent',
+                                   conv.get('assignment', 
+                                          conv.get('assignment_id', 
+                                                 conv.get('Assignment'))))
+            if assignment_id:
+                assignment_name = assignment_name_map.get(assignment_id, f'Assignment {assignment_id[:8]}')
+                assignment_counter[assignment_name] += 1
+        
+        # Sort by count (descending) and get top assignments
+        sorted_assignments = sorted(assignment_counter.items(), key=lambda x: x[1], reverse=True)
+        
+        # Get labels and data
+        labels = [assignment[0] for assignment in sorted_assignments]
+        data = [assignment[1] for assignment in sorted_assignments]
+        
+        app.logger.info(f"Generated assignment chart data: {len(labels)} assignments, {sum(data)} total sessions")
+        return jsonify({
+            'labels': labels,
+            'data': data,
+            'total_sessions': sum(data)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in /api/chart/sessions-by-assignment: {str(e)}")
+        return jsonify({'labels': [], 'data': [], 'error': str(e)}), 500
+
 @app.route('/api/chart/sessions-by-activity')
 def api_chart_sessions_by_activity():
     """
@@ -719,6 +800,23 @@ def api_conversations():
                 if course_id:
                     course_name_map[course_id] = course_name
         
+        # Fetch assignment data for proper naming in conversation list
+        all_assignments = fetch_all('assignment')
+        assignment_name_map = {}
+        
+        if all_assignments:
+            for assignment in all_assignments:
+                assignment_id = assignment.get('_id')
+                # Priority order: assignment_name_text > name_text > assignment_name > name > title > fallback
+                assignment_name = (assignment.get('assignment_name_text') or 
+                                 assignment.get('name_text') or 
+                                 assignment.get('assignment_name') or 
+                                 assignment.get('name') or 
+                                 assignment.get('title') or 
+                                 f'Assignment {assignment_id[:8]}' if assignment_id else 'Unknown Assignment')
+                if assignment_id:
+                    assignment_name_map[assignment_id] = assignment_name
+        
         # Extract key fields from each conversation
         result = []
         for conv in conversations:
@@ -728,11 +826,18 @@ def api_conversations():
                                       conv.get('course_id')))
             course_name = course_name_map.get(course_id, f'Course {course_id[:8]}' if course_id else 'Unknown Course')
             
+            # Get assignment ID and map it to proper assignment name
+            assignment_id = conv.get('assignment_custom_variable_parent',
+                                   conv.get('assignment', 
+                                          conv.get('assignment_id')))
+            assignment_name = assignment_name_map.get(assignment_id, f'Assignment {assignment_id[:8]}' if assignment_id else 'Unknown Assignment')
+            
             result.append({
                 '_id': conv.get('_id'),
                 'Created Date': conv.get('Created Date'),
                 'user': conv.get('user', conv.get('user_id')),
-                'assignment': conv.get('assignment', conv.get('assignment_id')),
+                'assignment': assignment_name,  # Use assignment name instead of ID
+                'assignment_id': assignment_id,  # Keep original ID for reference
                 'course': course_name,  # Use course name instead of ID
                 'course_id': course_id,  # Keep original ID for reference
                 'status': conv.get('status', 'active'),
