@@ -17,6 +17,10 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
   - Days: Individual daily data points
   - Weeks: Weekly aggregation (Monday-Sunday format)
   - Months: Monthly aggregation with full month names
+- **Course Title Display**: All course references now show full course titles instead of IDs:
+  - Charts display courses as "Claims in an Evolving World" vs "Course 17297132"
+  - Conversation lists show proper course names
+  - Metrics API returns readable course names
 
 ## User Preferences
 

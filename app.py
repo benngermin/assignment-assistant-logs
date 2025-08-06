@@ -339,11 +339,32 @@ def api_metrics():
                         
             app.logger.info(f"Found {len(starter_activity_map)} conversation starters with activity mappings")
             
+            # Fetch course data for proper naming in metrics
+            all_courses = fetch_all('course')
+            course_name_map = {}
+            
+            if all_courses:
+                for course in all_courses:
+                    course_id = course.get('_id')
+                    # Priority order: full_name_text > course_name > name_text > name > title > fallback
+                    course_name = (course.get('full_name_text') or 
+                                 course.get('course_name') or 
+                                 course.get('name_text') or 
+                                 course.get('name') or 
+                                 course.get('title') or 
+                                 f'Course {course_id[:8]}' if course_id else 'Unknown Course')
+                    if course_id:
+                        course_name_map[course_id] = course_name
+            
             for conv in all_conversations:
-                # Count by course field (assuming it exists as reference ID)
-                course_id = conv.get('course', conv.get('course_id', conv.get('Course')))
+                # Count by course field (using course_custom_variable_parent as primary field)
+                course_id = conv.get('course_custom_variable_parent', 
+                                   conv.get('course', 
+                                          conv.get('course_id', 
+                                                 conv.get('Course'))))
                 if course_id:
-                    course_counter[str(course_id)] += 1
+                    course_name = course_name_map.get(course_id, f'Course {course_id[:8]}')
+                    course_counter[course_name] += 1
                 
                 # Count by assignment field
                 assignment_id = conv.get('assignment', conv.get('assignment_id', conv.get('Assignment')))
@@ -528,7 +549,13 @@ def api_chart_sessions_by_course():
         if all_courses:
             for course in all_courses:
                 course_id = course.get('_id')
-                course_name = course.get('course_name', course.get('name', course.get('title', f'Course {course_id[:8]}')))
+                # Priority order: full_name_text > course_name > name_text > name > title > fallback
+                course_name = (course.get('full_name_text') or 
+                             course.get('course_name') or 
+                             course.get('name_text') or 
+                             course.get('name') or 
+                             course.get('title') or 
+                             f'Course {course_id[:8]}' if course_id else 'Unknown Course')
                 if course_id:
                     course_name_map[course_id] = course_name
         
@@ -675,15 +702,39 @@ def api_conversations():
         # Fetch all conversations with sorting and optional filters
         conversations = fetch_all('conversation', params)
         
+        # Fetch course data for proper naming in conversation list
+        all_courses = fetch_all('course')
+        course_name_map = {}
+        
+        if all_courses:
+            for course in all_courses:
+                course_id = course.get('_id')
+                # Priority order: full_name_text > course_name > name_text > name > title > fallback
+                course_name = (course.get('full_name_text') or 
+                             course.get('course_name') or 
+                             course.get('name_text') or 
+                             course.get('name') or 
+                             course.get('title') or 
+                             f'Course {course_id[:8]}' if course_id else 'Unknown Course')
+                if course_id:
+                    course_name_map[course_id] = course_name
+        
         # Extract key fields from each conversation
         result = []
         for conv in conversations:
+            # Get course ID and map it to proper course name
+            course_id = conv.get('course_custom_variable_parent', 
+                               conv.get('course', 
+                                      conv.get('course_id')))
+            course_name = course_name_map.get(course_id, f'Course {course_id[:8]}' if course_id else 'Unknown Course')
+            
             result.append({
                 '_id': conv.get('_id'),
                 'Created Date': conv.get('Created Date'),
                 'user': conv.get('user', conv.get('user_id')),
                 'assignment': conv.get('assignment', conv.get('assignment_id')),
-                'course': conv.get('course', conv.get('course_id')),
+                'course': course_name,  # Use course name instead of ID
+                'course_id': course_id,  # Keep original ID for reference
                 'status': conv.get('status', 'active'),
                 'last_message': conv.get('last_message', '')
             })
