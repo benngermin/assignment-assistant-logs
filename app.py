@@ -1539,6 +1539,10 @@ def internal_error(error):
         'details': str(error)
     }), 500
 
+# Import batch sync endpoint
+import app_batch_sync
+import simple_refresh
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5001))

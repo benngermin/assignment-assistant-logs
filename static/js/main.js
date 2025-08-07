@@ -40,9 +40,9 @@ function initializeDashboard() {
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing dashboard...';
             
             try {
-                // First, trigger database sync from Bubble API with longer timeout for full sync
+                // First, trigger database sync from Bubble API
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for full sync
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
                 
                 const syncResponse = await fetch('/api/refresh', {
                     method: 'POST',
