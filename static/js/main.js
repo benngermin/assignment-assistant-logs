@@ -41,9 +41,9 @@ function initializeDashboard() {
             
             try {
                 // First, trigger database sync from Bubble API using incremental sync
-                // This will add 500 items at a time to avoid timeouts
+                // This will add 100 items at a time to avoid timeouts
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
                 
                 const syncResponse = await fetch('/api/incremental-sync', {
                     method: 'POST',
@@ -51,13 +51,20 @@ function initializeDashboard() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        batch_size: 25,  // Small batches to avoid timeout
-                        max_items: 500   // Add 500 items per refresh click
+                        batch_size: 10,  // Very small batches to avoid timeout
+                        max_items: 100   // Add only 100 items per refresh to ensure success
                     }),
                     signal: controller.signal
                 });
                 
                 clearTimeout(timeoutId);
+                
+                // Check if response is JSON
+                const contentType = syncResponse.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Server timeout - try again with smaller batch");
+                }
+                
                 const syncResult = await syncResponse.json();
                 
                 if (syncResult.success) {
@@ -112,22 +119,24 @@ function initializeDashboard() {
                 }
             } catch (error) {
                 console.error('Error during refresh:', error);
-                let errorMessage = 'Failed to refresh data: ';
-                if (error.name === 'AbortError') {
-                    errorMessage += 'Sync is taking longer than usual. Please wait and try again in a moment.';
-                    // Still try to reload the dashboard data in case sync completed
+                
+                // Reset button
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
+                
+                // Handle different error types
+                if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                    showAlert('warning', 'The sync is taking longer than expected. Data is limited to 100 items per refresh to prevent timeouts. Click refresh again to continue adding more data.');
+                    // Still reload dashboard to show any data that was synced
                     setTimeout(() => {
                         loadStatistics();
                         loadConversations();
                         loadComprehensiveMetrics();
                         loadCharts();
-                    }, 5000);
+                    }, 2000);
                 } else {
-                    errorMessage += error.message;
+                    showAlert('danger', 'Sync error: ' + error.message);
                 }
-                showAlert('danger', errorMessage);
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh Data';
             }
         });
     }
