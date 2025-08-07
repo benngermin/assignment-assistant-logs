@@ -78,7 +78,7 @@ class BubbleSyncManager:
             cursor += len(results)
             
             # Safety limit to prevent infinite loops and timeouts
-            if len(all_results) > 5000:  # Reduced limit for faster sync
+            if len(all_results) > 10000:  # Increased limit to handle more conversations
                 logger.warning(f"Reached safety limit for {data_type}")
                 break
         
@@ -249,9 +249,35 @@ class BubbleSyncManager:
         logger.info(f"Synced {count} conversation starters")
         return count
     
-    def sync_conversations(self, modified_since=None):
-        """Sync conversations from Bubble to database"""
-        conversations_data = self.fetch_all_data('conversation', modified_since)
+    def sync_conversations(self, modified_since=None, limit=1000):
+        """Sync conversations from Bubble to database with batching"""
+        # Fetch limited data for better performance
+        conversations_data = []
+        cursor = 0
+        batch_size = 100
+        
+        while len(conversations_data) < limit:
+            logger.info(f"Fetching conversation batch - cursor: {cursor}")
+            page_data = self.fetch_bubble_page('conversation', cursor, batch_size)
+            
+            if not page_data:
+                break
+                
+            results = page_data.get('results', [])
+            conversations_data.extend(results)
+            
+            remaining = page_data.get('remaining', 0)
+            if remaining == 0:
+                break
+                
+            cursor += len(results)
+            
+            # Stop at limit
+            if len(conversations_data) >= limit:
+                conversations_data = conversations_data[:limit]
+                break
+        
+        logger.info(f"Fetched {len(conversations_data)} conversations to sync")
         count = 0
         
         for conv_data in conversations_data:
@@ -321,9 +347,35 @@ class BubbleSyncManager:
         logger.info(f"Synced {count} conversations")
         return count
     
-    def sync_messages(self, modified_since=None):
-        """Sync messages from Bubble to database"""
-        messages_data = self.fetch_all_data('message', modified_since)
+    def sync_messages(self, modified_since=None, limit=1000):
+        """Sync messages from Bubble to database with batching"""
+        # Fetch limited data for better performance
+        messages_data = []
+        cursor = 0
+        batch_size = 100
+        
+        while len(messages_data) < limit:
+            logger.info(f"Fetching message batch - cursor: {cursor}")
+            page_data = self.fetch_bubble_page('message', cursor, batch_size)
+            
+            if not page_data:
+                break
+                
+            results = page_data.get('results', [])
+            messages_data.extend(results)
+            
+            remaining = page_data.get('remaining', 0)
+            if remaining == 0:
+                break
+                
+            cursor += len(results)
+            
+            # Stop at limit
+            if len(messages_data) >= limit:
+                messages_data = messages_data[:limit]
+                break
+        
+        logger.info(f"Fetched {len(messages_data)} messages to sync")
         count = 0
         
         for msg_data in messages_data:
