@@ -1542,6 +1542,8 @@ def internal_error(error):
 # Import batch sync endpoint
 import app_batch_sync
 import simple_refresh
+import sequential_sync
+import incremental_sync
 
 if __name__ == '__main__':
     import os

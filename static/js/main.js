@@ -40,15 +40,20 @@ function initializeDashboard() {
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing dashboard...';
             
             try {
-                // First, trigger database sync from Bubble API
+                // First, trigger database sync from Bubble API using incremental sync
+                // This will add 500 items at a time to avoid timeouts
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
                 
-                const syncResponse = await fetch('/api/refresh', {
+                const syncResponse = await fetch('/api/incremental-sync', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    body: JSON.stringify({
+                        batch_size: 25,  // Small batches to avoid timeout
+                        max_items: 500   // Add 500 items per refresh click
+                    }),
                     signal: controller.signal
                 });
                 
@@ -56,11 +61,24 @@ function initializeDashboard() {
                 const syncResult = await syncResponse.json();
                 
                 if (syncResult.success) {
-                    // Update button to show loading dashboard data
-                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading dashboard...';
-                    
-                    // Show sync message
-                    showAlert('info', syncResult.message || 'Data sync completed');
+                    // Show what was synced
+                    if (syncResult.results) {
+                        const convAdded = syncResult.results.conversations?.added || 0;
+                        const msgAdded = syncResult.results.messages?.added || 0;
+                        const convTotal = syncResult.results.conversations?.after || 0;
+                        const msgTotal = syncResult.results.messages?.after || 0;
+                        
+                        // Update button to show loading dashboard data
+                        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading dashboard...';
+                        
+                        // Show sync message with details
+                        let message = `Added ${convAdded} conversations and ${msgAdded} messages. `;
+                        message += `Total in database: ${convTotal} conversations, ${msgTotal} messages`;
+                        showAlert('info', message);
+                    } else {
+                        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading dashboard...';
+                        showAlert('info', 'Data sync completed');
+                    }
                     
                     // Now reload all dashboard data from database
                     let completedOperations = 0;
