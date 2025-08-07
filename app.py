@@ -3,7 +3,7 @@ import logging
 import json
 import requests
 from collections import Counter
-from flask import Flask, render_template, jsonify, request, session
+from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime, timedelta
@@ -738,7 +738,6 @@ def api_chart_sessions_by_date():
         
         from datetime import datetime, timedelta
         from collections import defaultdict
-        import calendar
         
         # Calculate start date
         end_date = datetime.now()
@@ -1440,4 +1439,6 @@ def internal_error(error):
     }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    import os
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -1,0 +1,16 @@
+WARNING:app_optimized:No DATABASE_URL found, running without database
+ * Serving Flask app 'app_optimized'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5002
+ * Running on http://10.0.120.77:5002
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:app_optimized:No DATABASE_URL found, running without database
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 601-386-022
+WARNING:app:No DATABASE_URL found, running without database
+ERROR:database_queries:Error getting statistics: The current Flask app is not registered with this 'SQLAlchemy' instance. Did you forget to call 'init_app', or did you create multiple 'SQLAlchemy' instances?
+INFO:app_optimized:Using API fallback for stats
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 14:12:06] "GET /api/stats HTTP/1.1" 200 -

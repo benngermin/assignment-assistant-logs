@@ -94,7 +94,7 @@ class BubbleSyncManager:
             if date_str.endswith('Z'):
                 date_str = date_str[:-1] + '+00:00'
             return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except:
+        except (ValueError, TypeError, AttributeError):
             return None
     
     def sync_users(self, modified_since=None):

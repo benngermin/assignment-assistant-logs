@@ -1,0 +1,61 @@
+WARNING:app:No DATABASE_URL found, running without database
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.0.120.77:5001
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:app:No DATABASE_URL found, running without database
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 601-386-022
+WARNING:app:No DATABASE_URL found, running without database
+ERROR:database_queries:Error getting statistics: The current Flask app is not registered with this 'SQLAlchemy' instance. Did you forget to call 'init_app', or did you create multiple 'SQLAlchemy' instances?
+INFO:app:Database empty, using API fallback for stats
+INFO:app:Stats API response: {'users': 1675, 'conversations': 8990, 'messages': 9856, 'users_error': None, 'conversations_error': None, 'messages_error': None}
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 13:59:31] "GET /api/stats HTTP/1.1" 200 -
+INFO:app:Reached maximum items limit (2000) for message
+INFO:app:Successfully fetched 2000 total message items
+INFO:app:Reached maximum items limit (2000) for conversation
+INFO:app:Successfully fetched 2000 total conversation items
+INFO:app:Successfully fetched 6 total conversation_starter items
+INFO:app:Found 6 conversation starters with activity mappings
+INFO:app:Successfully fetched 16 total course items
+INFO:app:Successfully fetched 104 total assignment items
+INFO:app:Found 1 unique courses with conversations
+INFO:app:Found 0 unique assignments with conversations
+INFO:app:Feature counts: {'quiz_count': 0, 'review_count': 0, 'takeaway_count': 0, 'simplify_count': 0, 'study_count': 0, 'motivate_count': 0}
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 14:00:15] "GET /api/metrics HTTP/1.1" 200 -
+INFO:app:Fetching fresh data for conversation (cache miss or expired)
+INFO:app:Reached maximum items limit (2000) for conversation
+INFO:app:Successfully fetched 2000 total conversation items
+INFO:app:Cached 2000 items for conversation (fetch took 7.42s)
+INFO:app:Fetching fresh data for user (cache miss or expired)
+INFO:app:Successfully fetched 1675 total user items
+INFO:app:Cached 1675 items for user (fetch took 9.58s)
+INFO:app:Generated date chart data: 31 days, 0 total sessions
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 14:00:56] "GET /api/chart/sessions-by-date HTTP/1.1" 200 -
+INFO:app:Reached maximum items limit (2000) for conversation
+INFO:app:Successfully fetched 2000 total conversation items
+INFO:app:Successfully fetched 16 total course items
+INFO:app:Successfully fetched 104 total assignment items
+INFO:app:Successfully fetched 1675 total user items
+INFO:app:Successfully fetched 2000 conversations (filtered: False)
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 14:01:27] "GET /api/conversations HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [07/Aug/2025 14:03:01] "GET / HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in '/Users/bennji/Downloads/Assignment-Assistant-Logs/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:app:No DATABASE_URL found, running without database
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 601-386-022
+INFO:werkzeug: * Detected change in '/Users/bennji/Downloads/Assignment-Assistant-Logs/models.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:app:No DATABASE_URL found, running without database
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 601-386-022
+INFO:werkzeug: * Detected change in '/Users/bennji/Downloads/Assignment-Assistant-Logs/sync_manager.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:app:No DATABASE_URL found, running without database
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 601-386-022
