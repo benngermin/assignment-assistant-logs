@@ -117,7 +117,7 @@ class BubbleSyncManager:
                     email = auth['API - AWS Cognito']['email']
             
             # Check if user exists
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user:
                 user = User()
                 user.id = user_id
@@ -155,7 +155,7 @@ class BubbleSyncManager:
             if not course_id:
                 continue
             
-            course = Course.query.get(course_id)
+            course = db.session.get(Course, course_id)
             if not course:
                 course = Course()
                 course.id = course_id
@@ -186,7 +186,7 @@ class BubbleSyncManager:
             if not assignment_id:
                 continue
             
-            assignment = Assignment.query.get(assignment_id)
+            assignment = db.session.get(Assignment, assignment_id)
             if not assignment:
                 assignment = Assignment()
                 assignment.id = assignment_id
@@ -229,7 +229,7 @@ class BubbleSyncManager:
             if not starter_id:
                 continue
             
-            starter = ConversationStarter.query.get(starter_id)
+            starter = db.session.get(ConversationStarter, starter_id)
             if not starter:
                 starter = ConversationStarter()
                 starter.id = starter_id
@@ -285,7 +285,7 @@ class BubbleSyncManager:
             if not conv_id:
                 continue
             
-            conversation = Conversation.query.get(conv_id)
+            conversation = db.session.get(Conversation, conv_id)
             if not conversation:
                 conversation = Conversation()
                 conversation.id = conv_id
@@ -297,7 +297,7 @@ class BubbleSyncManager:
             
             # Look up user email from database
             if user_id:
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 if user:
                     conversation.user_email = user.email
             
@@ -307,7 +307,7 @@ class BubbleSyncManager:
             
             # Look up course name from database
             if course_id:
-                course = Course.query.get(course_id)
+                course = db.session.get(Course, course_id)
                 if course:
                     conversation.course_name = course.name or course.name_text or course.title
             
@@ -317,7 +317,7 @@ class BubbleSyncManager:
             
             # Look up assignment name from database  
             if assignment_id:
-                assignment = Assignment.query.get(assignment_id)
+                assignment = db.session.get(Assignment, assignment_id)
                 if assignment:
                     conversation.assignment_name = (assignment.assignment_name_text or 
                                                    assignment.name_text or 
@@ -331,7 +331,7 @@ class BubbleSyncManager:
             
             # Look up starter name from database
             if starter_id:
-                starter = ConversationStarter.query.get(starter_id)
+                starter = db.session.get(ConversationStarter, starter_id)
                 if starter:
                     conversation.conversation_starter_name = starter.name or starter.name_text
             
@@ -383,7 +383,7 @@ class BubbleSyncManager:
             if not msg_id:
                 continue
             
-            message = Message.query.get(msg_id)
+            message = db.session.get(Message, msg_id)
             if not message:
                 message = Message()
                 message.id = msg_id

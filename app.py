@@ -1373,23 +1373,124 @@ def refresh_data():
             results['conversation_starters']['error'] = str(e)
             
         try:
-            # Sync conversations (limit to recent ones if too many)
-            app.logger.info("Syncing conversations...")
-            count = sync_manager.sync_conversations()
-            results['conversations'] = {'count': count, 'success': True}
-            app.logger.info(f"Synced {count} conversations")
+            # Sync ALL conversations in batches of 500
+            app.logger.info("Syncing all conversations in batches...")
+            total_conv_count = 0
+            batch_size = 500
+            cursor = 0
+            
+            while True:
+                # Fetch batch of conversations
+                page_data = sync_manager.fetch_bubble_page('conversation', cursor, batch_size)
+                if not page_data:
+                    break
+                    
+                batch_results = page_data.get('results', [])
+                if not batch_results:
+                    break
+                    
+                # Sync this batch
+                batch_count = 0
+                for conv_data in batch_results:
+                    conv_id = conv_data.get('_id')
+                    if not conv_id:
+                        continue
+                    
+                    conversation = db.session.get(Conversation, conv_id)
+                    if not conversation:
+                        conversation = Conversation()
+                        conversation.id = conv_id
+                        db.session.add(conversation)
+                    
+                    # Update conversation data
+                    conversation.user_id = conv_data.get('user')
+                    conversation.course_id = conv_data.get('course')
+                    conversation.assignment_id = conv_data.get('assignment')
+                    conversation.conversation_starter_id = conv_data.get('conversation_starter')
+                    conversation.message_count = conv_data.get('message_count', 0)
+                    conversation.created_date = sync_manager.parse_datetime(conv_data.get('Created Date'))
+                    conversation.modified_date = sync_manager.parse_datetime(conv_data.get('Modified Date'))
+                    conversation.raw_data = conv_data
+                    conversation.last_synced = datetime.utcnow()
+                    batch_count += 1
+                
+                # Commit this batch
+                db.session.commit()
+                total_conv_count += batch_count
+                app.logger.info(f"Synced batch of {batch_count} conversations (total: {total_conv_count})")
+                
+                # Check if there are more
+                remaining = page_data.get('remaining', 0)
+                if remaining == 0:
+                    break
+                    
+                cursor += len(batch_results)
+            
+            results['conversations'] = {'count': total_conv_count, 'success': True}
+            app.logger.info(f"Synced {total_conv_count} total conversations")
         except Exception as e:
             app.logger.error(f"Error syncing conversations: {e}")
+            db.session.rollback()
             results['conversations']['error'] = str(e)
             
         try:
-            # Sync messages (limit to recent ones if too many)
-            app.logger.info("Syncing messages...")
-            count = sync_manager.sync_messages()
-            results['messages'] = {'count': count, 'success': True}
-            app.logger.info(f"Synced {count} messages")
+            # Sync ALL messages in batches of 500
+            app.logger.info("Syncing all messages in batches...")
+            total_msg_count = 0
+            batch_size = 500
+            cursor = 0
+            
+            while True:
+                # Fetch batch of messages
+                page_data = sync_manager.fetch_bubble_page('message', cursor, batch_size)
+                if not page_data:
+                    break
+                    
+                batch_results = page_data.get('results', [])
+                if not batch_results:
+                    break
+                    
+                # Sync this batch
+                batch_count = 0
+                for msg_data in batch_results:
+                    msg_id = msg_data.get('_id')
+                    if not msg_id:
+                        continue
+                    
+                    message = db.session.get(Message, msg_id)
+                    if not message:
+                        message = Message()
+                        message.id = msg_id
+                        db.session.add(message)
+                    
+                    # Update message data
+                    message.conversation_id = msg_data.get('conversation')
+                    message.role = msg_data.get('role')
+                    message.role_option_message_role = msg_data.get('role_option_message_role')
+                    message.text = msg_data.get('text')
+                    message.created_date = sync_manager.parse_datetime(msg_data.get('Created Date'))
+                    message.modified_date = sync_manager.parse_datetime(msg_data.get('Modified Date'))
+                    message.raw_data = msg_data
+                    message.last_synced = datetime.utcnow()
+                    batch_count += 1
+                
+                # Commit this batch
+                db.session.commit()
+                total_msg_count += batch_count
+                app.logger.info(f"Synced batch of {batch_count} messages (total: {total_msg_count})")
+                
+                # Check if there are more
+                remaining = page_data.get('remaining', 0)
+                if remaining == 0:
+                    break
+                    
+                cursor += len(batch_results)
+            
+            results['messages'] = {'count': total_msg_count, 'success': True}
+            app.logger.info(f"Synced {total_msg_count} total messages")
         except Exception as e:
             app.logger.error(f"Error syncing messages: {e}")
+            db.session.rollback()
             results['messages']['error'] = str(e)
         
         # Clear the old cache since we're using database now
