@@ -6,6 +6,12 @@ This is a Flask-based web dashboard for the Assignment Assistant system that int
 
 ## Recent Changes (August 2025)
 
+### Security Update (August 7, 2025)
+- **API Key Security**: Moved Bubble API key from hardcoded values to secure Replit Secrets
+- **Environment Variable**: API key now stored as BUBBLE_API_KEY_LIVE in Replit Secrets
+- **Code Cleanup**: Removed all hardcoded API keys from source files (DASHBOARD_SETUP.md, start_dashboard.sh)
+- **Verified Connectivity**: Confirmed API connection working with secure credential storage
+
 ### Production-Ready Configuration (August 6, 2025)
 - **Restored Bubble API Connections**: Fixed hardcoded API blocking - now properly connects to live Bubble API using BUBBLE_API_KEY_LIVE
 - **Removed All Development References**: Completely removed "Dev version" UI toggles and development-specific code

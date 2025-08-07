@@ -11,7 +11,7 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 else
     echo "Warning: .env file not found. Using default values."
-    export BUBBLE_API_KEY_LIVE="7c62edca8f27655cd29e3f0f6a971748"
+    export BUBBLE_API_KEY_LIVE="your-bubble-api-key-here"
     export SESSION_SECRET="assignment-assistant-secret-key-2025"
     export PORT=5001
 fi

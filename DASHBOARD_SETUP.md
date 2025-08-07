@@ -27,7 +27,7 @@ The dashboard is now running and successfully fetching data from Bubble:
 
 3. **Manual Start** (if script doesn't work):
    ```bash
-   export BUBBLE_API_KEY_LIVE="7c62edca8f27655cd29e3f0f6a971748"
+   export BUBBLE_API_KEY_LIVE="your-bubble-api-key-here"
    export SESSION_SECRET="assignment-assistant-secret-key-2025"
    export PORT=5001
    python3 app.py
