@@ -7,6 +7,7 @@ from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime, timedelta
+from shared_utils import is_excluded_email
 import time
 
 # Set up logging
@@ -228,27 +229,6 @@ def get_total_count(data_type, filter_user_messages=False):
         app.logger.error(f"Exception in get_total_count for {data_type}: {str(e)}")
         return 0
 
-def is_excluded_email(email):
-    """
-    Check if an email should be excluded from metrics and displays
-    
-    Args:
-        email (str): Email address to check
-        
-    Returns:
-        bool: True if email should be excluded, False otherwise
-    """
-    if not email:
-        return False
-    
-    excluded_domains = ['@modia.ai', '@theinstitutes.org']
-    email_lower = email.lower()
-    
-    for domain in excluded_domains:
-        if domain in email_lower:
-            return True
-    
-    return False
 
 def fetch_all(data_type, custom_params=None):
     """
@@ -1298,6 +1278,7 @@ def refresh_data():
     try:
         from sync_manager import BubbleSyncManager
         from models import SyncStatus, User, Course, Assignment, Conversation, Message, ConversationStarter
+        from shared_utils import parse_datetime as parse_dt
         
         # Check current database state
         try:
@@ -1396,7 +1377,7 @@ def refresh_data():
                     if not conv_id:
                         continue
                     
-                    conversation = db.session.get(Conversation, conv_id)
+                    conversation = Conversation.query.filter_by(id=conv_id).first()
                     if not conversation:
                         conversation = Conversation()
                         conversation.id = conv_id
@@ -1408,8 +1389,8 @@ def refresh_data():
                     conversation.assignment_id = conv_data.get('assignment')
                     conversation.conversation_starter_id = conv_data.get('conversation_starter')
                     conversation.message_count = conv_data.get('message_count', 0)
-                    conversation.created_date = sync_manager.parse_datetime(conv_data.get('Created Date'))
-                    conversation.modified_date = sync_manager.parse_datetime(conv_data.get('Modified Date'))
+                    conversation.created_date = parse_dt(conv_data.get('Created Date'))
+                    conversation.modified_date = parse_dt(conv_data.get('Modified Date'))
                     conversation.raw_data = conv_data
                     conversation.last_synced = datetime.utcnow()
                     batch_count += 1
@@ -1457,7 +1438,7 @@ def refresh_data():
                     if not msg_id:
                         continue
                     
-                    message = db.session.get(Message, msg_id)
+                    message = Message.query.filter_by(id=msg_id).first()
                     if not message:
                         message = Message()
                         message.id = msg_id
@@ -1468,8 +1449,8 @@ def refresh_data():
                     message.role = msg_data.get('role')
                     message.role_option_message_role = msg_data.get('role_option_message_role')
                     message.text = msg_data.get('text')
-                    message.created_date = sync_manager.parse_datetime(msg_data.get('Created Date'))
-                    message.modified_date = sync_manager.parse_datetime(msg_data.get('Modified Date'))
+                    message.created_date = parse_dt(msg_data.get('Created Date'))
+                    message.modified_date = parse_dt(msg_data.get('Modified Date'))
                     message.raw_data = msg_data
                     message.last_synced = datetime.utcnow()
                     batch_count += 1
@@ -1545,7 +1526,14 @@ import simple_refresh
 import sequential_sync
 import incremental_sync
 
+# Import new batch processing modules
+import batch_refresh
+
 if __name__ == '__main__':
+    # Initialize scheduler for hourly syncs when running as main
+    import scheduler
+    with app.app_context():
+        scheduler.init_scheduler()
     import os
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)

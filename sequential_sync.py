@@ -5,6 +5,7 @@ from flask import jsonify
 from app import app, db
 from models import User, Course, Assignment, ConversationStarter, Conversation, Message
 from datetime import datetime
+from shared_utils import parse_datetime
 import requests
 import os
 import logging
@@ -45,17 +46,6 @@ class SequentialSyncManager:
                 return None
         except Exception as e:
             logger.error(f"Error fetching {data_type} page at cursor {cursor}: {e}")
-            return None
-    
-    def parse_datetime(self, date_str):
-        """Parse datetime string from Bubble"""
-        if not date_str:
-            return None
-        try:
-            if date_str.endswith('Z'):
-                date_str = date_str[:-1] + '+00:00'
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except:
             return None
     
     def sync_small_data(self, data_type):
@@ -106,7 +96,7 @@ class SequentialSyncManager:
             if not user_id:
                 continue
             
-            user = db.session.get(User, user_id)
+            user = User.query.filter_by(id=user_id).first()
             if not user:
                 user = User(id=user_id)
                 db.session.add(user)
@@ -118,7 +108,7 @@ class SequentialSyncManager:
                 email = auth['email']['email']
             
             user.email = email
-            user.created_date = self.parse_datetime(user_data.get('Created Date'))
+            user.created_date = parse_datetime(user_data.get('Created Date'))
             user.raw_data = user_data
             user.last_synced = datetime.utcnow()
     
@@ -129,14 +119,14 @@ class SequentialSyncManager:
             if not course_id:
                 continue
             
-            course = db.session.get(Course, course_id)
+            course = Course.query.filter_by(id=course_id).first()
             if not course:
                 course = Course(id=course_id)
                 db.session.add(course)
             
             course.name = course_data.get('name')
             course.description = course_data.get('description')
-            course.created_date = self.parse_datetime(course_data.get('Created Date'))
+            course.created_date = parse_datetime(course_data.get('Created Date'))
             course.raw_data = course_data
             course.last_synced = datetime.utcnow()
     
@@ -147,7 +137,7 @@ class SequentialSyncManager:
             if not assignment_id:
                 continue
             
-            assignment = db.session.get(Assignment, assignment_id)
+            assignment = Assignment.query.filter_by(id=assignment_id).first()
             if not assignment:
                 assignment = Assignment(id=assignment_id)
                 db.session.add(assignment)
@@ -158,7 +148,7 @@ class SequentialSyncManager:
                              assignment_data.get('name') or
                              assignment_data.get('title'))
             assignment.course_id = assignment_data.get('course')
-            assignment.created_date = self.parse_datetime(assignment_data.get('Created Date'))
+            assignment.created_date = parse_datetime(assignment_data.get('Created Date'))
             assignment.raw_data = assignment_data
             assignment.last_synced = datetime.utcnow()
     
@@ -169,14 +159,14 @@ class SequentialSyncManager:
             if not starter_id:
                 continue
             
-            starter = db.session.get(ConversationStarter, starter_id)
+            starter = ConversationStarter.query.filter_by(id=starter_id).first()
             if not starter:
                 starter = ConversationStarter(id=starter_id)
                 db.session.add(starter)
             
             starter.name = starter_data.get('name')
             starter.prompt = starter_data.get('prompt')
-            starter.created_date = self.parse_datetime(starter_data.get('Created Date'))
+            starter.created_date = parse_datetime(starter_data.get('Created Date'))
             starter.raw_data = starter_data
             starter.last_synced = datetime.utcnow()
     
@@ -202,7 +192,7 @@ class SequentialSyncManager:
                 if not conv_id:
                     continue
                 
-                conv = db.session.get(Conversation, conv_id)
+                conv = Conversation.query.filter_by(id=conv_id).first()
                 if not conv:
                     conv = Conversation(id=conv_id)
                     db.session.add(conv)
@@ -212,7 +202,7 @@ class SequentialSyncManager:
                 conv.assignment_id = conv_data.get('assignment')
                 conv.conversation_starter_id = conv_data.get('conversation_starter')
                 conv.message_count = conv_data.get('message_count', 0)
-                conv.created_date = self.parse_datetime(conv_data.get('Created Date'))
+                conv.created_date = parse_datetime(conv_data.get('Created Date'))
                 conv.raw_data = conv_data
                 conv.last_synced = datetime.utcnow()
             
@@ -255,7 +245,7 @@ class SequentialSyncManager:
                 if not msg_id:
                     continue
                 
-                msg = db.session.get(Message, msg_id)
+                msg = Message.query.filter_by(id=msg_id).first()
                 if not msg:
                     msg = Message(id=msg_id)
                     db.session.add(msg)
@@ -264,7 +254,7 @@ class SequentialSyncManager:
                 msg.role = msg_data.get('role')
                 msg.role_option_message_role = msg_data.get('role_option_message_role')
                 msg.text = msg_data.get('text')
-                msg.created_date = self.parse_datetime(msg_data.get('Created Date'))
+                msg.created_date = parse_datetime(msg_data.get('Created Date'))
                 msg.raw_data = msg_data
                 msg.last_synced = datetime.utcnow()
             

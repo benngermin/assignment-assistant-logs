@@ -5,6 +5,7 @@ from flask import jsonify, request
 from app import app, db
 from models import Conversation, Message
 from datetime import datetime
+from shared_utils import parse_datetime
 import requests
 import os
 import logging
@@ -194,15 +195,3 @@ def incremental_sync():
     except Exception as e:
         logger.error(f"Error in incremental sync: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
-def parse_datetime(date_str):
-    """Parse datetime string from Bubble"""
-    if not date_str:
-        return None
-    try:
-        if date_str.endswith('Z'):
-            date_str = date_str[:-1] + '+00:00'
-        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-    except:
-        return None

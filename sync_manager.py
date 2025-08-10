@@ -11,6 +11,7 @@ from models import (
     User, Course, Assignment, Conversation, Message, 
     ConversationStarter, SyncStatus
 )
+from shared_utils import parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -85,18 +86,6 @@ class BubbleSyncManager:
         logger.info(f"Fetched {len(all_results)} total {data_type} records")
         return all_results
     
-    def parse_datetime(self, date_str):
-        """Parse datetime string from Bubble API"""
-        if not date_str:
-            return None
-        try:
-            # Handle ISO format with 'Z' timezone
-            if date_str.endswith('Z'):
-                date_str = date_str[:-1] + '+00:00'
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except (ValueError, TypeError, AttributeError):
-            return None
-    
     def sync_users(self, modified_since=None):
         """Sync users from Bubble to database"""
         users_data = self.fetch_all_data('user', modified_since)
@@ -117,7 +106,7 @@ class BubbleSyncManager:
                     email = auth['API - AWS Cognito']['email']
             
             # Check if user exists
-            user = db.session.get(User, user_id)
+            user = User.query.filter_by(id=user_id).first()
             if not user:
                 user = User()
                 user.id = user_id
@@ -129,8 +118,8 @@ class BubbleSyncManager:
             user.role_option_roles = user_data.get('role_option_roles')
             user.is_company_opted_out = user_data.get('is_company_opted_out_boolean', False)
             user.has_seen_tooltip_tour = user_data.get('has_seen_tooltip_tour_boolean', False)
-            user.created_date = self.parse_datetime(user_data.get('Created Date'))
-            user.modified_date = self.parse_datetime(user_data.get('Modified Date'))
+            user.created_date = parse_datetime(user_data.get('Created Date'))
+            user.modified_date = parse_datetime(user_data.get('Modified Date'))
             user.raw_data = user_data
             user.last_synced = datetime.utcnow()
             
@@ -155,7 +144,7 @@ class BubbleSyncManager:
             if not course_id:
                 continue
             
-            course = db.session.get(Course, course_id)
+            course = Course.query.filter_by(id=course_id).first()
             if not course:
                 course = Course()
                 course.id = course_id
@@ -165,8 +154,8 @@ class BubbleSyncManager:
             course.name = course_data.get('name')
             course.name_text = course_data.get('name_text')
             course.title = course_data.get('title')
-            course.created_date = self.parse_datetime(course_data.get('Created Date'))
-            course.modified_date = self.parse_datetime(course_data.get('Modified Date'))
+            course.created_date = parse_datetime(course_data.get('Created Date'))
+            course.modified_date = parse_datetime(course_data.get('Modified Date'))
             course.raw_data = course_data
             course.last_synced = datetime.utcnow()
             
@@ -186,7 +175,7 @@ class BubbleSyncManager:
             if not assignment_id:
                 continue
             
-            assignment = db.session.get(Assignment, assignment_id)
+            assignment = Assignment.query.filter_by(id=assignment_id).first()
             if not assignment:
                 assignment = Assignment()
                 assignment.id = assignment_id
@@ -199,8 +188,8 @@ class BubbleSyncManager:
             assignment.assignment_name_text = assignment_data.get('assignment_name_text')
             assignment.title = assignment_data.get('title')
             assignment.course_id = assignment_data.get('course')
-            assignment.created_date = self.parse_datetime(assignment_data.get('Created Date'))
-            assignment.modified_date = self.parse_datetime(assignment_data.get('Modified Date'))
+            assignment.created_date = parse_datetime(assignment_data.get('Created Date'))
+            assignment.modified_date = parse_datetime(assignment_data.get('Modified Date'))
             assignment.raw_data = assignment_data
             assignment.last_synced = datetime.utcnow()
             
@@ -229,7 +218,7 @@ class BubbleSyncManager:
             if not starter_id:
                 continue
             
-            starter = db.session.get(ConversationStarter, starter_id)
+            starter = ConversationStarter.query.filter_by(id=starter_id).first()
             if not starter:
                 starter = ConversationStarter()
                 starter.id = starter_id
@@ -238,8 +227,8 @@ class BubbleSyncManager:
             starter.name = starter_data.get('name') or starter_data.get('name_text')
             starter.name_text = starter_data.get('name_text')
             starter.activity_type = activity_mapping.get(starter_id, 'other')
-            starter.created_date = self.parse_datetime(starter_data.get('Created Date'))
-            starter.modified_date = self.parse_datetime(starter_data.get('Modified Date'))
+            starter.created_date = parse_datetime(starter_data.get('Created Date'))
+            starter.modified_date = parse_datetime(starter_data.get('Modified Date'))
             starter.raw_data = starter_data
             starter.last_synced = datetime.utcnow()
             
@@ -285,7 +274,7 @@ class BubbleSyncManager:
             if not conv_id:
                 continue
             
-            conversation = db.session.get(Conversation, conv_id)
+            conversation = Conversation.query.filter_by(id=conv_id).first()
             if not conversation:
                 conversation = Conversation()
                 conversation.id = conv_id
@@ -297,7 +286,7 @@ class BubbleSyncManager:
             
             # Look up user email from database
             if user_id:
-                user = db.session.get(User, user_id)
+                user = User.query.filter_by(id=user_id).first()
                 if user:
                     conversation.user_email = user.email
             
@@ -307,7 +296,7 @@ class BubbleSyncManager:
             
             # Look up course name from database
             if course_id:
-                course = db.session.get(Course, course_id)
+                course = Course.query.filter_by(id=course_id).first()
                 if course:
                     conversation.course_name = course.name or course.name_text or course.title
             
@@ -317,7 +306,7 @@ class BubbleSyncManager:
             
             # Look up assignment name from database  
             if assignment_id:
-                assignment = db.session.get(Assignment, assignment_id)
+                assignment = Assignment.query.filter_by(id=assignment_id).first()
                 if assignment:
                     conversation.assignment_name = (assignment.assignment_name_text or 
                                                    assignment.name_text or 
@@ -331,13 +320,13 @@ class BubbleSyncManager:
             
             # Look up starter name from database
             if starter_id:
-                starter = db.session.get(ConversationStarter, starter_id)
+                starter = ConversationStarter.query.filter_by(id=starter_id).first()
                 if starter:
                     conversation.conversation_starter_name = starter.name or starter.name_text
             
             conversation.message_count = conv_data.get('message_count', 0)
-            conversation.created_date = self.parse_datetime(conv_data.get('Created Date'))
-            conversation.modified_date = self.parse_datetime(conv_data.get('Modified Date'))
+            conversation.created_date = parse_datetime(conv_data.get('Created Date'))
+            conversation.modified_date = parse_datetime(conv_data.get('Modified Date'))
             conversation.raw_data = conv_data
             conversation.last_synced = datetime.utcnow()
             
@@ -383,7 +372,7 @@ class BubbleSyncManager:
             if not msg_id:
                 continue
             
-            message = db.session.get(Message, msg_id)
+            message = Message.query.filter_by(id=msg_id).first()
             if not message:
                 message = Message()
                 message.id = msg_id
@@ -393,8 +382,8 @@ class BubbleSyncManager:
             message.role = msg_data.get('role')
             message.role_option_message_role = msg_data.get('role_option_message_role')
             message.text = msg_data.get('text')
-            message.created_date = self.parse_datetime(msg_data.get('Created Date'))
-            message.modified_date = self.parse_datetime(msg_data.get('Modified Date'))
+            message.created_date = parse_datetime(msg_data.get('Created Date'))
+            message.modified_date = parse_datetime(msg_data.get('Modified Date'))
             message.raw_data = msg_data
             message.last_synced = datetime.utcnow()
             

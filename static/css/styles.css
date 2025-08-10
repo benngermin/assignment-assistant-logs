@@ -684,3 +684,70 @@ body {
         margin-right: 0;
     }
 }
+
+/* Batch Refresh Progress Styles */
+.progress-details {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.progress-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.progress-item .progress {
+    background: #e9ecef;
+}
+
+.progress-item .progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Scheduler Status Styles */
+.scheduler-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.scheduler-status .badge {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Progress Modal Styles */
+#progressModal .modal-body {
+    min-height: 400px;
+}
+
+#progressModal .overall-progress {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 10px;
+    color: white;
+}
+
+#progressModal .overall-progress h6 {
+    color: white;
+    margin-bottom: 10px;
+}
+
+#progressModal .progress {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#progressModal .progress-bar {
+    background: white;
+    color: #667eea;
+    font-weight: bold;
+}
+
+#progress-messages .alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
